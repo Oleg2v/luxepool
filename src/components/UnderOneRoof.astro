@@ -1,0 +1,134 @@
+---
+/**
+ * 7 · Everything under one roof — a calm two-column block.
+ */
+import Icon from './Icon.astro';
+import { equipment, services } from '@/data/site';
+---
+<section class="section roof" id="services" aria-labelledby="roof-title">
+  <div class="container roof__grid">
+    <div class="roof__intro">
+      <p class="eyebrow" data-reveal>שירותים</p>
+      <h2 id="roof-title" data-reveal>הכל תחת<br />קורת גג אחת</h2>
+      <p class="lead" data-reveal style="--reveal-delay:.08s">
+        תכנון, בנייה, ציוד, תחזוקה ושיפוץ. אותה חברה ואותם צוותים, מהיום הראשון ועד שנים אחרי המסירה.
+      </p>
+    </div>
+
+    <ul class="roof__list">
+      {services.map((s, i) => (
+        <li class="roof__item" data-reveal style={`--reveal-delay:${i * 0.06}s`}>
+          <span class="roof__num num ltr" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+          <div>
+            <h3 class="roof__title">{s.title}</h3>
+            <p class="roof__text">{s.text}</p>
+            {s.link && (
+              <a class="link-arrow roof__link" href={s.link.href} target="_blank" rel="noopener">
+                <span class="ltr">{s.link.label}</span>
+                <Icon name="arrow-out" size={16} />
+                <span class="sr-only">(חנות הציוד של לוקספול, נפתח בחלון חדש)</span>
+              </a>
+            )}
+          </div>
+        </li>
+      ))}
+      <li class="roof__equip" data-reveal>
+        <p class="roof__equip-label">גם:</p>
+        <p class="roof__equip-list">{equipment.join(' · ')}</p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<style>
+  .roof {
+    background: var(--c-mist);
+  }
+
+  .roof__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  .roof__intro {
+    display: grid;
+    gap: 18px;
+    align-content: start;
+  }
+
+  .roof__intro h2 {
+    font-size: var(--t-h2);
+  }
+
+  .roof__intro .lead {
+    max-inline-size: 30em;
+  }
+
+  .roof__list {
+    display: grid;
+  }
+
+  .roof__item {
+    display: grid;
+    grid-template-columns: 2.6em 1fr;
+    gap: 12px;
+    padding-block: 26px;
+    border-block-start: 1px solid var(--c-line-2);
+  }
+
+  .roof__num {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--c-deep);
+    padding-block-start: 0.55em;
+  }
+
+  .roof__title {
+    font-size: var(--t-h3);
+    font-weight: 300;
+    margin-block-end: 6px;
+  }
+
+  .roof__text {
+    color: var(--c-body);
+    max-inline-size: 36ch;
+  }
+
+  .roof__link {
+    margin-block-start: 12px;
+  }
+
+  .roof__equip {
+    padding-block: 22px 0;
+    border-block-start: 1px solid var(--c-line-2);
+    font-size: 0.875rem;
+  }
+
+  .roof__equip-label {
+    font-weight: 600;
+    color: var(--c-ink);
+    margin-block-end: 4px;
+  }
+
+  .roof__equip-list {
+    color: var(--c-body);
+    line-height: 1.8;
+  }
+
+  @media (min-width: 1024px) {
+    .roof__grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gutter);
+    }
+    .roof__intro {
+      grid-column: 1 / 6;
+      position: sticky;
+      inset-block-start: calc(var(--header-h) + 48px);
+      align-self: start;
+    }
+    .roof__list {
+      grid-column: 7 / -1;
+    }
+  }
+</style>

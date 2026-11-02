@@ -1,0 +1,52 @@
+---
+/**
+ * Floating WhatsApp button — mobile only. Hidden over the hero, the configurator
+ * controls, the contact section and the footer (where WhatsApp is already on screen),
+ * and while typing, so it never covers anything the visitor is using.
+ */
+import Icon from './Icon.astro';
+import { waLink, quoteMessage } from '@/lib/whatsapp';
+import { defaultDesign } from '@/lib/store';
+
+const wa = waLink(quoteMessage({ poolType: null, design: defaultDesign(), designTouched: false }));
+---
+<a class="fab" href={wa} data-wa="quote" data-fab target="_blank" rel="noopener" aria-label="וואטסאפ לבניית בריכה (נפתח בחלון חדש)">
+  <Icon name="whatsapp" size={28} />
+</a>
+
+<style>
+  .fab {
+    position: fixed;
+    z-index: 40;
+    inset-block-end: max(16px, env(safe-area-inset-bottom));
+    inset-inline-end: 16px;
+    display: grid;
+    place-items: center;
+    inline-size: 56px;
+    block-size: 56px;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--c-wa);
+    box-shadow: 0 14px 30px -12px rgb(18 140 126 / 0.65), 0 0 0 1px rgb(255 255 255 / 0.6);
+    opacity: 0;
+    transform: translateY(16px) scale(0.92);
+    pointer-events: none;
+    transition: opacity 0.35s var(--ease-out), transform 0.5s var(--ease-out);
+  }
+
+  .fab.is-on {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .fab:focus-visible {
+    outline-color: var(--c-ink);
+  }
+
+  @media (min-width: 1024px) {
+    .fab {
+      display: none;
+    }
+  }
+</style>

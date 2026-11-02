@@ -1,0 +1,367 @@
+---
+import Icon from './Icon.astro';
+import { phones, company } from '@/data/site';
+import { waLink, quoteMessage } from '@/lib/whatsapp';
+import { defaultDesign } from '@/lib/store';
+
+const nav = [
+  { href: '#types', label: 'סוגי בריכות' },
+  { href: '#design', label: 'תכננו בריכה' },
+  { href: '#projects', label: 'פרויקטים' },
+  { href: '#contact', label: 'צור קשר' },
+];
+const wa = waLink(quoteMessage({ poolType: null, design: defaultDesign(), designTouched: false }));
+---
+<header class="hdr" data-hdr>
+  <div class="hdr__inner container">
+    <a href="#top" class="hdr__brand">
+      <span class="hdr__wordmark ltr">{company.wordmark}</span>
+      <span class="hdr__brand-he">שירותי בריכות</span>
+      <span class="sr-only">לוקספול, לראש העמוד</span>
+    </a>
+
+    <nav class="hdr__nav" aria-label="ניווט ראשי">
+      <ul>
+        {nav.map((n) => (
+          <li><a href={n.href} data-nav>{n.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="hdr__actions">
+      <a class="hdr__icon-link" href={wa} data-wa="quote" target="_blank" rel="noopener" aria-label="וואטסאפ לבניית בריכה (נפתח בחלון חדש)">
+        <Icon name="whatsapp" size={22} class="wa-glyph" />
+      </a>
+      <a class="btn btn--primary btn--small hdr__cta" href="#contact" data-cta-quote>הצעת מחיר</a>
+      <button class="hdr__menu-btn" type="button" aria-expanded="false" aria-controls="mobile-menu" data-menu-open>
+        <Icon name="menu" size={24} />
+        <span class="sr-only">פתיחת תפריט</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="mmenu" id="mobile-menu" role="dialog" aria-modal="true" aria-label="תפריט" hidden data-menu>
+  <div class="mmenu__top container">
+    <span class="hdr__wordmark ltr">{company.wordmark}</span>
+    <button class="hdr__menu-btn is-visible" type="button" data-menu-close>
+      <Icon name="close" size={24} />
+      <span class="sr-only">סגירת תפריט</span>
+    </button>
+  </div>
+  <nav class="mmenu__nav container" aria-label="ניווט ראשי (נייד)">
+    <ul>
+      {nav.map((n, i) => (
+        <li style={`--i:${i}`}><a href={n.href} data-menu-link>{n.label}</a></li>
+      ))}
+    </ul>
+  </nav>
+  <div class="mmenu__contact container">
+    <a class="btn btn--primary btn--block" href="#contact" data-menu-link>קבלו הצעת מחיר</a>
+    <a class="btn btn--ghost btn--block" href={wa} data-wa="quote" target="_blank" rel="noopener">
+      <Icon name="whatsapp" class="wa-glyph" /> וואטסאפ <span class="ltr">{phones.buildWhatsApp.display}</span>
+    </a>
+    <dl class="mmenu__routes">
+      <div><dt>בניית בריכה חדשה</dt><dd><a class="ltr" href={`tel:${phones.build.tel}`}>{phones.build.display}</a></dd></div>
+      <div><dt>שירות וציוד</dt><dd><a class="ltr" href={`tel:${phones.service.tel}`}>{phones.service.display}</a></dd></div>
+    </dl>
+  </div>
+</div>
+
+<style>
+  .hdr {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline: 0;
+    z-index: 50;
+    block-size: var(--header-h);
+    transition:
+      background-color 0.4s var(--ease-out),
+      box-shadow 0.4s var(--ease-out),
+      transform 0.5s var(--ease-out);
+  }
+
+  .hdr.is-scrolled {
+    background: rgb(255 255 255 / 0.86);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    backdrop-filter: saturate(1.4) blur(14px);
+    box-shadow: 0 1px 0 var(--c-line);
+  }
+
+  .hdr__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    block-size: 100%;
+  }
+
+  .hdr__brand {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 12px;
+    text-decoration: none;
+    color: var(--c-ink);
+  }
+
+  .hdr__wordmark {
+    font: 600 0.9375rem / 1 'Inter Tight', var(--f-ui);
+    letter-spacing: 0.24em;
+    color: var(--c-ink);
+    /* optical: compensate trailing tracking */
+    margin-inline-end: -0.24em;
+  }
+
+  .hdr__brand-he {
+    display: none;
+    font-size: 0.8125rem;
+    color: var(--c-body);
+    padding-inline-start: 12px;
+    border-inline-start: 1px solid var(--c-line-2);
+  }
+
+  .hdr__nav {
+    display: none;
+  }
+
+  .hdr__nav ul {
+    display: flex;
+    gap: clamp(20px, 2.6vw, 40px);
+  }
+
+  .hdr__nav a {
+    position: relative;
+    display: inline-block;
+    padding-block: 8px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--c-ink);
+    text-decoration: none;
+  }
+
+  .hdr__nav a::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 2px;
+    block-size: 1px;
+    background: var(--grad-bright);
+    transform: scaleX(0);
+    transform-origin: var(--origin, right);
+    transition: transform 0.5s var(--ease-out);
+  }
+
+  .hdr__nav a:hover::after,
+  .hdr__nav a[aria-current='location']::after {
+    transform: scaleX(1);
+  }
+
+  .hdr__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .hdr__icon-link {
+    display: none;
+    place-items: center;
+    inline-size: 42px;
+    block-size: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--c-line-2);
+    background: #fff;
+    transition: border-color 0.3s;
+  }
+
+  .hdr__icon-link:hover {
+    border-color: var(--c-wa);
+  }
+
+  .hdr__icon-link :global(.wa-glyph) {
+    color: var(--c-wa);
+  }
+
+  .hdr__menu-btn {
+    display: grid;
+    place-items: center;
+    inline-size: 44px;
+    block-size: 44px;
+    border-radius: 50%;
+    color: var(--c-ink);
+  }
+
+  @media (min-width: 1024px) {
+    .hdr__brand-he {
+      display: inline;
+    }
+    .hdr__nav {
+      display: block;
+    }
+    .hdr__icon-link {
+      display: grid;
+    }
+    .hdr__menu-btn:not(.is-visible) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .hdr__cta {
+      padding-inline: 14px;
+    }
+  }
+
+  /* ---------------------------------------------------------- mobile menu */
+  .mmenu {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .mmenu[hidden] {
+    display: none;
+  }
+
+  .mmenu__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-block-size: var(--header-h);
+    border-block-end: 1px solid var(--c-line);
+  }
+
+  .mmenu__nav {
+    padding-block: 28px 12px;
+  }
+
+  .mmenu__nav li {
+    border-block-end: 1px solid var(--c-line);
+  }
+
+  .mmenu__nav a {
+    display: block;
+    padding-block: 18px;
+    font: 300 2rem / 1.1 var(--f-display);
+    color: var(--c-ink);
+    text-decoration: none;
+  }
+
+  .motion .mmenu:not([hidden]) li {
+    animation: mmenu-in 0.7s var(--ease-out) both;
+    animation-delay: calc(var(--i) * 60ms + 60ms);
+  }
+
+  @keyframes mmenu-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+
+  .mmenu__contact {
+    display: grid;
+    gap: 12px;
+    padding-block: 20px 36px;
+    margin-block-start: auto;
+  }
+
+  .mmenu__routes {
+    display: grid;
+    gap: 10px;
+    margin-block-start: 12px;
+    font-size: 0.9375rem;
+  }
+
+  .mmenu__routes div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding-block: 10px;
+    border-block-start: 1px solid var(--c-line);
+  }
+
+  .mmenu__routes dd a {
+    color: var(--c-ink);
+    font-weight: 600;
+    text-decoration: none;
+  }
+</style>
+
+<script>
+  import { lockScroll, unlockScroll } from '@/scripts/scroll-lock';
+
+  const hdr = document.querySelector<HTMLElement>('[data-hdr]')!;
+  const menu = document.querySelector<HTMLElement>('[data-menu]')!;
+  const openBtn = document.querySelector<HTMLButtonElement>('[data-menu-open]')!;
+  const closeBtn = menu.querySelector<HTMLButtonElement>('[data-menu-close]')!;
+
+  // Solid header once the page moves.
+  const onScroll = () => hdr.classList.toggle('is-scrolled', window.scrollY > 8);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  // Mobile menu: focus trap, Escape, restore focus.
+  let lastFocus: HTMLElement | null = null;
+  const focusables = () =>
+    Array.from(menu.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'));
+
+  function open() {
+    lastFocus = document.activeElement as HTMLElement;
+    menu.hidden = false;
+    openBtn.setAttribute('aria-expanded', 'true');
+    lockScroll();
+    requestAnimationFrame(() => closeBtn.focus());
+  }
+
+  function close(restore = true) {
+    menu.hidden = true;
+    openBtn.setAttribute('aria-expanded', 'false');
+    unlockScroll();
+    if (restore) lastFocus?.focus();
+  }
+
+  openBtn.addEventListener('click', open);
+  closeBtn.addEventListener('click', () => close());
+  menu.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close();
+    if (e.key !== 'Tab') return;
+    const f = focusables();
+    const first = f[0];
+    const last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+  menu.querySelectorAll('[data-menu-link]').forEach((a) => a.addEventListener('click', () => close(false)));
+  window.matchMedia('(min-width: 1024px)').addEventListener('change', (e) => {
+    if (e.matches && !menu.hidden) close(false);
+  });
+
+  // Current section in the nav (aria-current="location").
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-nav]'));
+  const targets = links
+    .map((a) => document.querySelector<HTMLElement>(a.hash))
+    .filter((el): el is HTMLElement => !!el);
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        links.forEach((a) => {
+          if (a.hash === `#${entry.target.id}`) a.setAttribute('aria-current', 'location');
+          else a.removeAttribute('aria-current');
+        });
+      }
+    },
+    { rootMargin: '-45% 0px -50% 0px' },
+  );
+  targets.forEach((t) => io.observe(t));
+</script>

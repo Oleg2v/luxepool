@@ -1,0 +1,825 @@
+---
+/**
+ * 8 · Quote request. Short form, pre-filled from the type selector and the configurator,
+ * a big WhatsApp alternative, and clear phone routing (new pool vs. service/equipment).
+ * Posts JSON to PUBLIC_QUOTE_WEBHOOK_URL; without it the page runs in demo mode.
+ */
+import Icon from './Icon.astro';
+import { company, phones, poolTypes, startOptions } from '@/data/site';
+import { waLink, quoteMessage, serviceMessage } from '@/lib/whatsapp';
+import { defaultDesign } from '@/lib/store';
+
+const wa = waLink(quoteMessage({ poolType: null, design: defaultDesign(), designTouched: false }));
+const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
+---
+<section class="section quote" id="contact" aria-labelledby="quote-title">
+  <div class="container quote__grid">
+    <div class="quote__intro">
+      <p class="eyebrow" data-reveal>הצעת מחיר</p>
+      <h2 id="quote-title" data-reveal>בואו נדבר על<br />הבריכה שלכם</h2>
+      <p class="lead" data-reveal style="--reveal-delay:.08s">
+        השאירו פרטים ונחזור אליכם. מעדיפים וואטסאפ? גם זה מצוין.
+      </p>
+
+      <div class="quote__wa" data-reveal>
+        <p class="quote__wa-title">מעדיפים לכתוב?</p>
+        <p class="quote__wa-text">שלחו הודעה, והבחירות שלכם באתר כבר יהיו בתוכה.</p>
+        <a class="quote__wa-btn" href={wa} data-wa="quote" target="_blank" rel="noopener">
+          <Icon name="whatsapp" size={24} class="wa-glyph" />
+          <span>וואטסאפ <span class="ltr num">{phones.buildWhatsApp.display}</span></span>
+          <span class="sr-only">(נפתח בחלון חדש)</span>
+        </a>
+      </div>
+
+      <div class="quote__routes" data-reveal>
+        <div class="route">
+          <h3 class="route__title">בניית בריכה חדשה</h3>
+          <ul>
+            <li>
+              <Icon name="phone" size={18} />
+              <a href={`tel:${phones.build.tel}`} class="ltr num">{phones.build.display}</a>
+              <span class="route__kind">טלפון</span>
+            </li>
+            <li>
+              <Icon name="whatsapp" size={18} class="wa-glyph" />
+              <a href={wa} data-wa="quote" target="_blank" rel="noopener" class="ltr num">{phones.buildWhatsApp.display}</a>
+              <span class="route__kind">וואטסאפ</span>
+            </li>
+          </ul>
+        </div>
+        <div class="route">
+          <h3 class="route__title">שירות וציוד</h3>
+          <ul>
+            <li>
+              <Icon name="phone" size={18} />
+              <a href={`tel:${phones.service.tel}`} class="ltr num">{phones.service.display}</a>
+              <span class="route__kind">טלפון</span>
+            </li>
+            <li>
+              <Icon name="whatsapp" size={18} class="wa-glyph" />
+              <a href={waService} target="_blank" rel="noopener" class="ltr num">{phones.service.display}</a>
+              <span class="route__kind">וואטסאפ</span>
+            </li>
+          </ul>
+        </div>
+        <p class="route__mail">
+          <Icon name="mail" size={18} />
+          <a href={`mailto:${company.email}`} class="ltr">{company.email}</a>
+        </p>
+      </div>
+    </div>
+
+    <div class="quote__card" data-reveal>
+      <form class="qf" data-qf novalidate aria-labelledby="quote-title">
+        <div class="qf__summary" data-qf-summary hidden>
+          <p class="qf__summary-title">יצורף לבקשה</p>
+          <p class="qf__summary-text" data-qf-summary-text></p>
+        </div>
+
+        <div class="qf__row">
+          <div class="qf__field">
+            <label for="qf-name">שם מלא</label>
+            <input id="qf-name" name="name" type="text" autocomplete="name" required aria-describedby="qf-name-err" />
+            <p class="qf__err" id="qf-name-err" data-err="name"></p>
+          </div>
+          <div class="qf__field">
+            <label for="qf-phone">טלפון</label>
+            <input id="qf-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" dir="ltr" required aria-describedby="qf-phone-err" />
+            <p class="qf__err" id="qf-phone-err" data-err="phone"></p>
+          </div>
+        </div>
+
+        <div class="qf__row">
+          <div class="qf__field">
+            <label for="qf-city">יישוב <span class="qf__opt">(לא חובה)</span></label>
+            <input id="qf-city" name="city" type="text" autocomplete="address-level2" />
+          </div>
+          <div class="qf__field">
+            <label for="qf-type">סוג בריכה</label>
+            <div class="qf__select">
+              <select id="qf-type" name="poolType" data-qf-type>
+                <option value="">עוד לא החלטנו</option>
+                {poolTypes.map((t) => <option value={t.id}>{t.short}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <fieldset class="qf__field qf__when">
+          <legend>מתי תרצו להתחיל?</legend>
+          <div class="qf__pills">
+            {startOptions.map((o, i) => (
+              <label class="qf__pill">
+                <input type="radio" name="start" value={o.value} checked={i === 1} />
+                <span>{o.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div class="qf__field">
+          <label for="qf-msg">הודעה <span class="qf__opt">(לא חובה)</span></label>
+          <textarea id="qf-msg" name="message" rows="3" data-qf-msg placeholder="גודל החצר, משהו שחשוב לכם, שאלה…"></textarea>
+        </div>
+
+        <div class="qf__hp" aria-hidden="true">
+          <label for="qf-company">חברה</label>
+          <input id="qf-company" name="company" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <p class="qf__status" role="alert" data-qf-status></p>
+
+        <button type="submit" class="btn btn--primary btn--block qf__submit" data-qf-submit>
+          <span data-qf-submit-label>שלחו בקשה להצעת מחיר</span>
+        </button>
+        <p class="qf__fine">נשתמש בפרטים רק כדי לחזור אליכם בנוגע לבריכה.</p>
+      </form>
+
+      <div class="qf-done" data-qf-done hidden>
+        <div class="qf-done__mark" aria-hidden="true">
+          <span class="qf-done__ring"></span>
+          <span class="qf-done__ring qf-done__ring--2"></span>
+          <span class="qf-done__ring qf-done__ring--3"></span>
+          <Icon name="check" size={30} />
+        </div>
+        <h3 class="qf-done__title" tabindex="-1" data-qf-done-title>תודה, קיבלנו את הבקשה.</h3>
+        <p class="qf-done__text" data-qf-done-text>צוות הבנייה שלנו יחזור אליכם בהקדם.</p>
+        <dl class="qf-done__list" data-qf-done-list></dl>
+        <a class="btn btn--ghost" href={wa} data-wa-done target="_blank" rel="noopener">
+          <Icon name="whatsapp" class="wa-glyph" /> רוצים להקדים? כתבו לנו בוואטסאפ
+        </a>
+        <p class="qf-done__demo" data-qf-demo hidden>מצב הדגמה: הפרטים לא נשלחו לשום מקום. באתר החי הם יגיעו ישר למשרד.</p>
+        <button type="button" class="qf-done__again" data-qf-again>שליחת בקשה נוספת</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .quote {
+    background: var(--c-white);
+  }
+
+  .quote__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  .quote__intro {
+    display: grid;
+    gap: 18px;
+    align-content: start;
+  }
+
+  .quote__intro h2 {
+    font-size: var(--t-h2);
+  }
+
+  /* WhatsApp: the one key surface in this section */
+  .quote__wa {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    margin-block-start: 10px;
+    padding: 24px;
+    border-radius: var(--r-l);
+    color: #fff;
+    background: linear-gradient(200deg, #6ec1e4 -62%, #1c5198 42%, #173f78 100%);
+    overflow: hidden;
+  }
+
+  .quote__wa-title {
+    font: 300 1.625rem / 1.15 var(--f-display);
+  }
+
+  .quote__wa-text {
+    font-size: 0.9375rem;
+    color: #fff;
+    max-inline-size: 32ch;
+  }
+
+  .quote__wa-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-block-start: 14px;
+    min-block-size: 58px;
+    padding-inline: 22px;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--c-ink);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 16px 32px -18px rgb(0 0 0 / 0.5);
+    transition: transform 0.45s var(--ease-out);
+  }
+
+  .quote__wa-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .quote__wa-btn:focus-visible {
+    outline-color: #fff;
+  }
+
+  .quote__wa-btn :global(.wa-glyph) {
+    color: var(--c-wa);
+  }
+
+  .quote__routes {
+    display: grid;
+    gap: 0;
+    margin-block-start: 8px;
+  }
+
+  .route {
+    padding-block: 18px;
+    border-block-end: 1px solid var(--c-line);
+  }
+
+  .route__title {
+    font: 600 0.9375rem / 1.3 var(--f-ui);
+    color: var(--c-ink);
+    margin-block-end: 10px;
+  }
+
+  .route ul {
+    display: grid;
+    gap: 8px;
+  }
+
+  .route li,
+  .route__mail {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .route li :global(svg),
+  .route__mail :global(svg) {
+    color: var(--c-deep);
+  }
+
+  .route li :global(.wa-glyph) {
+    color: var(--c-wa);
+  }
+
+  .route a,
+  .route__mail a {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--c-ink);
+    text-decoration: none;
+  }
+
+  .route a:hover,
+  .route__mail a:hover {
+    color: var(--c-deep);
+    text-decoration: underline;
+  }
+
+  .route__kind {
+    font-size: 0.8125rem;
+    color: var(--c-body);
+  }
+
+  .route__mail {
+    padding-block-start: 18px;
+  }
+
+  .route__mail a {
+    font-size: 1rem;
+  }
+
+  /* ------------------------------------------------------------ form */
+  .quote__card {
+    padding: clamp(22px, 3.4vw, 40px);
+    border-radius: var(--r-l);
+    background: var(--c-mist);
+    box-shadow: inset 0 0 0 1px var(--c-line);
+    align-self: start;
+  }
+
+  .qf {
+    display: grid;
+    gap: 18px;
+  }
+
+  .qf__summary {
+    padding: 14px 16px;
+    border-radius: var(--r-m);
+    background: #fff;
+    box-shadow: inset 0 0 0 1px var(--c-line), inset 3px 0 0 var(--c-deep);
+  }
+
+  .qf__summary-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--c-deep);
+    margin-block-end: 2px;
+  }
+
+  .qf__summary-text {
+    font-size: 0.9375rem;
+    color: var(--c-ink);
+  }
+
+  .qf__row {
+    display: grid;
+    gap: 18px;
+  }
+
+  .qf__field {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-inline-size: 0;
+  }
+
+  .qf__field label,
+  .qf__field legend {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--c-ink);
+    padding: 0;
+  }
+
+  .qf__opt {
+    font-weight: 400;
+    color: var(--c-body);
+  }
+
+  .qf input[type='text'],
+  .qf input[type='tel'],
+  .qf select,
+  .qf textarea {
+    inline-size: 100%;
+    min-block-size: 52px;
+    padding: 12px 14px;
+    border-radius: var(--r-m);
+    border: 1px solid var(--c-line-2);
+    background: #fff;
+    font-size: 1rem;
+    color: var(--c-ink);
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+
+  .qf input[type='tel'] {
+    text-align: right;
+  }
+
+  .qf textarea {
+    min-block-size: 96px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+
+  .qf input:hover,
+  .qf select:hover,
+  .qf textarea:hover {
+    border-color: rgb(27 36 48 / 0.35);
+  }
+
+  .qf input:focus-visible,
+  .qf select:focus-visible,
+  .qf textarea:focus-visible {
+    outline: none;
+    border-color: var(--c-deep);
+    box-shadow: 0 0 0 3px rgb(110 193 228 / 0.45);
+  }
+
+  .qf [aria-invalid='true'] {
+    border-color: #b42318 !important;
+  }
+
+  .qf__select {
+    position: relative;
+  }
+
+  .qf__select select {
+    appearance: none;
+    padding-inline-end: 40px;
+  }
+
+  .qf__select::after {
+    content: '';
+    position: absolute;
+    inset-inline-end: 16px;
+    inset-block-start: 50%;
+    inline-size: 8px;
+    block-size: 8px;
+    border-inline-end: 1.5px solid var(--c-ink);
+    border-block-end: 1.5px solid var(--c-ink);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+
+  .qf__pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .qf__pill {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .qf__pill input {
+    position: absolute;
+    opacity: 0;
+    inline-size: 1px;
+    block-size: 1px;
+  }
+
+  .qf__pill span {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+    padding-inline: 16px;
+    border-radius: 999px;
+    border: 1px solid var(--c-line-2);
+    background: #fff;
+    font-size: 0.875rem;
+    color: var(--c-ink);
+    transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+  }
+
+  .qf__pill input:checked + span {
+    border-color: var(--c-deep);
+    background: var(--c-deep);
+    color: #fff;
+  }
+
+  .qf__pill input:focus-visible + span {
+    outline: 2px solid var(--c-deep);
+    outline-offset: 3px;
+  }
+
+  .qf__err {
+    min-block-size: 0;
+    font-size: 0.8125rem;
+    color: #b42318;
+  }
+
+  .qf__err:empty {
+    display: none;
+  }
+
+  .qf__hp {
+    position: absolute;
+    inset-inline-start: -9999px;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+  }
+
+  .qf__status {
+    font-size: 0.875rem;
+    color: #b42318;
+  }
+
+  .qf__status:empty {
+    display: none;
+  }
+
+  .qf__submit {
+    --btn-h: 58px;
+    font-size: 1.0625rem;
+  }
+
+  .qf__submit[aria-busy='true'] {
+    opacity: 0.75;
+    pointer-events: none;
+  }
+
+  .qf__fine {
+    font-size: 0.8125rem;
+    color: var(--c-body);
+    text-align: center;
+  }
+
+  /* ------------------------------------------------------- confirmation */
+  .qf-done {
+    display: grid;
+    justify-items: center;
+    gap: 16px;
+    padding-block: 24px 8px;
+    text-align: center;
+  }
+
+  .qf-done[hidden] {
+    display: none;
+  }
+
+  .qf-done__mark {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 84px;
+    block-size: 84px;
+    border-radius: 50%;
+    background: var(--grad-bright);
+    color: #fff;
+    margin-block-end: 12px;
+  }
+
+  .qf-done__ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid rgb(28 81 152 / 0.35);
+    animation: done-ripple 2.8s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+  }
+
+  .qf-done__ring--2 {
+    animation-delay: 0.5s;
+  }
+
+  .qf-done__ring--3 {
+    animation-delay: 1s;
+  }
+
+  @keyframes done-ripple {
+    from {
+      transform: scale(1);
+      opacity: 0.9;
+    }
+    to {
+      transform: scale(2.6);
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .qf-done__ring {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
+  .qf-done__title {
+    font-size: clamp(1.75rem, 1.4rem + 1.2vw, 2.25rem);
+    font-weight: 300;
+  }
+
+  .qf-done__title:focus {
+    outline: none;
+  }
+
+  .qf-done__text {
+    max-inline-size: 34ch;
+  }
+
+  .qf-done__list {
+    display: grid;
+    gap: 6px;
+    inline-size: 100%;
+    max-inline-size: 420px;
+    padding: 14px 16px;
+    border-radius: var(--r-m);
+    background: #fff;
+    box-shadow: inset 0 0 0 1px var(--c-line);
+    font-size: 0.875rem;
+    text-align: start;
+  }
+
+  .qf-done__list:empty {
+    display: none;
+  }
+
+  .qf-done__list div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .qf-done__list dt {
+    color: var(--c-body);
+  }
+
+  .qf-done__list dd {
+    color: var(--c-ink);
+    font-weight: 500;
+    text-align: end;
+  }
+
+  .qf-done__demo {
+    font-size: 0.8125rem;
+    color: var(--c-body);
+    max-inline-size: 36ch;
+  }
+
+  .qf-done__again {
+    font-size: 0.875rem;
+    color: var(--c-deep);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    padding: 8px;
+  }
+
+  @media (min-width: 640px) {
+    .qf__row {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .quote__grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gutter);
+    }
+    .quote__intro {
+      grid-column: 1 / 6;
+    }
+    .quote__card {
+      grid-column: 7 / -1;
+    }
+  }
+</style>
+
+<script>
+  import { store } from '@/lib/store';
+  import { designSummary, quoteMessage, waLink } from '@/lib/whatsapp';
+  import { examplePrice, formatShekel } from '@/lib/pricing';
+  import { poolTypeById, startOptions } from '@/data/site';
+
+  const form = document.querySelector<HTMLFormElement>('[data-qf]')!;
+  const done = document.querySelector<HTMLElement>('[data-qf-done]')!;
+  const typeSelect = form.querySelector<HTMLSelectElement>('[data-qf-type]')!;
+  const msg = form.querySelector<HTMLTextAreaElement>('[data-qf-msg]')!;
+  const summary = form.querySelector<HTMLElement>('[data-qf-summary]')!;
+  const summaryText = form.querySelector<HTMLElement>('[data-qf-summary-text]')!;
+  const status = form.querySelector<HTMLElement>('[data-qf-status]')!;
+  const submit = form.querySelector<HTMLButtonElement>('[data-qf-submit]')!;
+  const submitLabel = form.querySelector<HTMLElement>('[data-qf-submit-label]')!;
+  const WEBHOOK = (import.meta.env.PUBLIC_QUOTE_WEBHOOK_URL as string | undefined)?.trim() || '';
+
+  // ---------------------------------------------------- store ⇄ form
+  let autoMsg = '';
+  function sync() {
+    const s = store.get();
+    if (typeSelect.value !== (s.poolType ?? '')) typeSelect.value = s.poolType ?? '';
+    const parts: string[] = [];
+    const type = poolTypeById(s.poolType);
+    if (type) parts.push(type.short);
+    if (s.designTouched) parts.push(designSummary(s.design));
+    summary.hidden = parts.length === 0;
+    summaryText.textContent = parts.join(' · ');
+  }
+  store.subscribe(sync);
+  sync();
+
+  typeSelect.addEventListener('change', () => store.set({ poolType: (typeSelect.value || null) as never }));
+
+  // "Send this design" from the configurator: pre-fill and bring the form into view.
+  window.addEventListener('lp:send-design', () => {
+    const s = store.get();
+    const text = `התכנון שלי: ${designSummary(s.design)}`;
+    if (!msg.value.trim() || msg.value === autoMsg) {
+      msg.value = text;
+      autoMsg = text;
+    }
+    sync();
+    const target = document.getElementById('contact')!;
+    const lenis = (window as Window & { __lenis?: { scrollTo(t: Element, o?: object): void } }).__lenis;
+    const focusName = () => form.querySelector<HTMLInputElement>('#qf-name')!.focus({ preventScroll: true });
+    if (lenis) {
+      lenis.scrollTo(target, { offset: -72, duration: 1.4, onComplete: focusName });
+    } else {
+      target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      setTimeout(focusName, 700);
+    }
+  });
+
+  // ---------------------------------------------------- validation
+  const digits = (v: string) => v.replace(/\D/g, '');
+  const validPhone = (v: string) => /^(?:972|0)(?:5\d{8}|7\d{8}|[23489]\d{7})$/.test(digits(v));
+
+  function setError(name: string, text: string) {
+    const input = form.elements.namedItem(name) as HTMLInputElement;
+    const err = form.querySelector<HTMLElement>(`[data-err="${name}"]`)!;
+    err.textContent = text;
+    if (text) input.setAttribute('aria-invalid', 'true');
+    else input.removeAttribute('aria-invalid');
+  }
+
+  function validate() {
+    const fd = new FormData(form);
+    const name = String(fd.get('name') || '').trim();
+    const phone = String(fd.get('phone') || '').trim();
+    let ok = true;
+    if (name.length < 2) {
+      setError('name', 'איך לפנות אליכם? כתבו שם.');
+      ok = false;
+    } else setError('name', '');
+    if (!validPhone(phone)) {
+      setError('phone', 'בדקו את מספר הטלפון, למשל 050-1234567.');
+      ok = false;
+    } else setError('phone', '');
+    return ok;
+  }
+
+  form.querySelectorAll<HTMLInputElement>('#qf-name, #qf-phone').forEach((el) =>
+    el.addEventListener('blur', () => {
+      if (el.value) validate();
+    }),
+  );
+
+  // ---------------------------------------------------- submit
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    status.textContent = '';
+    if (!validate()) {
+      form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+      return;
+    }
+    const fd = new FormData(form);
+    if (String(fd.get('company') || '')) return; // honeypot
+
+    const s = store.get();
+    const type = poolTypeById(String(fd.get('poolType') || ''));
+    const start = startOptions.find((o) => o.value === fd.get('start'));
+    const price = s.designTouched ? examplePrice(s.design, s.poolType) : null;
+    const payload = {
+      name: String(fd.get('name')).trim(),
+      phone: String(fd.get('phone')).trim(),
+      city: String(fd.get('city') || '').trim(),
+      poolType: type?.id ?? null,
+      poolTypeLabel: type?.short ?? null,
+      start: start?.label ?? null,
+      message: String(fd.get('message') || '').trim(),
+      design: s.designTouched ? s.design : null,
+      designSummary: s.designTouched ? designSummary(s.design) : null,
+      exampleRange: price ? `${formatShekel(price.low)}–${formatShekel(price.high)} (example only)` : null,
+      source: 'luxepool-concept',
+      page: location.href,
+      submittedAt: new Date().toISOString(),
+    };
+
+    submit.setAttribute('aria-busy', 'true');
+    submitLabel.textContent = 'שולחים…';
+    try {
+      if (WEBHOOK) {
+        // text/plain keeps this a "simple" CORS request (no preflight); the body is JSON.
+        const res = await fetch(WEBHOOK, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+      } else {
+        await new Promise((r) => setTimeout(r, 650));
+      }
+      showDone(payload, !WEBHOOK);
+    } catch {
+      status.textContent = 'משהו השתבש בשליחה. נסו שוב, או כתבו לנו בוואטסאפ.';
+    } finally {
+      submit.removeAttribute('aria-busy');
+      submitLabel.textContent = 'שלחו בקשה להצעת מחיר';
+    }
+  });
+
+  function showDone(p: { name: string; phone: string; poolTypeLabel: string | null; designSummary: string | null; start: string | null }, demo: boolean) {
+    const first = p.name.split(/\s+/)[0];
+    done.querySelector('[data-qf-done-title]')!.textContent = `תודה, ${first}. קיבלנו את הבקשה.`;
+    done.querySelector('[data-qf-done-text]')!.textContent = `צוות הבנייה שלנו יחזור אליכם בהקדם, לטלפון ${p.phone}.`;
+    const list = done.querySelector<HTMLElement>('[data-qf-done-list]')!;
+    list.replaceChildren();
+    const rows: [string, string | null][] = [
+      ['סוג בריכה', p.poolTypeLabel],
+      ['התכנון', p.designSummary],
+      ['מתי', p.start],
+    ];
+    for (const [k, v] of rows) {
+      if (!v) continue;
+      const row = document.createElement('div');
+      const dt = document.createElement('dt');
+      const dd = document.createElement('dd');
+      dt.textContent = k;
+      dd.textContent = v;
+      row.append(dt, dd);
+      list.append(row);
+    }
+    done.querySelector<HTMLElement>('[data-qf-demo]')!.hidden = !demo;
+    const waBtn = done.querySelector<HTMLAnchorElement>('[data-wa-done]')!;
+    waBtn.href = waLink(`${quoteMessage(store.get())}\nשמי ${p.name}, השארתי פרטים באתר.`);
+    form.hidden = true;
+    done.hidden = false;
+    done.querySelector<HTMLElement>('[data-qf-done-title]')!.focus();
+  }
+
+  done.querySelector('[data-qf-again]')!.addEventListener('click', () => {
+    form.reset();
+    autoMsg = '';
+    sync();
+    done.hidden = true;
+    form.hidden = false;
+    form.querySelector<HTMLInputElement>('#qf-name')!.focus();
+  });
+</script>

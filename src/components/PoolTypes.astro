@@ -1,0 +1,516 @@
+---
+/**
+ * 2 · "Which pool is yours" — horizontal, swipeable selector.
+ * Real Luxepool photos where a project of that type exists, plan illustrations where
+ * not (labelled). One tap marks the type for the quote form and WhatsApp message.
+ */
+import Icon from './Icon.astro';
+import PoolDiagram from './PoolDiagram.astro';
+import { poolTypes } from '@/data/site';
+import { cropStyle, rectCrop } from '@/lib/crop';
+---
+<section class="section types" id="types" aria-labelledby="types-title">
+  <div class="container types__head">
+    <div class="section-head">
+      <p class="eyebrow" data-reveal>סוגי בריכות</p>
+      <h2 id="types-title" data-reveal>איזו בריכה מתאימה לכם?</h2>
+      <p class="lead" data-reveal style="--reveal-delay:.08s">
+        כל סוג נבנה אחרת, בזמן אחר ובתקציב אחר. בחרו את מה שמתאים לחצר שלכם, ונצרף את הבחירה להצעת המחיר.
+      </p>
+    </div>
+    <div class="types__controls" data-reveal>
+      <div class="types__progress" aria-hidden="true"><span data-types-progress></span></div>
+      <div class="types__arrows">
+        <button type="button" class="types__arrow" data-types-prev aria-label="סוג הקודם" disabled>
+          <Icon name="arrow" size={20} class="types__arrow-prev" />
+        </button>
+        <button type="button" class="types__arrow" data-types-next aria-label="סוג הבא">
+          <Icon name="arrow" size={20} />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="types__viewport">
+    <ul class="types__track" data-types-track aria-label="סוגי בריכות">
+      {poolTypes.map((t, i) => (
+        <li class="type" data-type={t.id}>
+          <article class="type__card" aria-labelledby={`type-${t.id}`}>
+            <div class="type__visual">
+              {t.visual.kind === 'photo' ? (
+                <div class="crop type__photo" style={cropStyle(rectCrop(t.visual.photo, 0.8, t.visual.scale, t.visual.dx, t.visual.dy))}>
+                  <img
+                    src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                    data-src={t.visual.photo.src}
+                    alt={t.visual.photo.alt}
+                    width="1600"
+                    height="900"
+                    decoding="async"
+                  />
+                  <noscript><img src={t.visual.photo.src} alt="" width="1600" height="900" /></noscript>
+                </div>
+              ) : (
+                <PoolDiagram kind={t.id as 'favorit' | 'fiberglass' | 'natural' | 'rooftop'} title={`איור תכנון של ${t.name}`} />
+              )}
+              <span class={`type__badge ${t.visual.kind === 'photo' ? 'is-photo' : ''}`}>
+                {t.visual.kind === 'photo' ? `פרויקט של לוקספול · ${t.visual.caption}` : t.visual.caption}
+              </span>
+            </div>
+            <div class="type__body">
+              <p class="type__num num ltr" aria-hidden="true">{String(i + 1).padStart(2, '0')}</p>
+              <h3 id={`type-${t.id}`} class="type__name">{t.name}</h3>
+              <dl class="type__facts">
+                <div>
+                  <dt>זמן בנייה</dt>
+                  <dd><span>{t.buildTime}</span> <span class="example-tag">דוגמה</span></dd>
+                </div>
+                <div>
+                  <dt>מראה</dt>
+                  <dd>{t.look}</dd>
+                </div>
+                <div>
+                  <dt>שימוש נפוץ</dt>
+                  <dd>{t.use}</dd>
+                </div>
+              </dl>
+              <p class="type__best"><span>הכי מתאימה ל</span>{t.bestFor}</p>
+              <button type="button" class="type__pick" aria-pressed="false" data-pick={t.id} aria-describedby={`type-${t.id}`}>
+                <span class="type__pick-dot" aria-hidden="true"><Icon name="check" size={14} /></span>
+                <span class="type__pick-label" data-pick-label>זו הבריכה שלי</span>
+              </button>
+            </div>
+          </article>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <p class="container types__note" data-reveal>
+    בונים גם בריכות עם קיר אקרילי. זמני הבנייה כאן הם דוגמה בלבד, והם משתנים לפי השטח, התכנון והאישורים.
+  </p>
+</section>
+
+<style>
+  .types {
+    background: var(--c-mist);
+    overflow: hidden;
+  }
+
+  .types__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px 40px;
+    margin-block-end: clamp(32px, 4vw, 56px);
+  }
+
+  .types__head .section-head {
+    margin-block-end: 0;
+  }
+
+  .types__controls {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    inline-size: 100%;
+  }
+
+  .types__progress {
+    position: relative;
+    flex: 1;
+    block-size: 1px;
+    background: var(--c-line-2);
+    overflow: hidden;
+  }
+
+  .types__progress span {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: 100%;
+    background: var(--grad-bright);
+    transform-origin: right;
+    transform: scaleX(var(--p, 0.12));
+    transition: transform 0.3s linear;
+  }
+
+  .types__arrows {
+    display: flex;
+    gap: 8px;
+  }
+
+  .types__arrow {
+    display: grid;
+    place-items: center;
+    inline-size: 48px;
+    block-size: 48px;
+    border-radius: 50%;
+    border: 1px solid var(--c-line-2);
+    background: #fff;
+    color: var(--c-ink);
+    transition: border-color 0.3s, opacity 0.3s, transform 0.4s var(--ease-out);
+  }
+
+  .types__arrow:hover:not(:disabled) {
+    border-color: var(--c-deep);
+    color: var(--c-deep);
+  }
+
+  .types__arrow:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  /* Previous points back toward the reading start (right in RTL). */
+  .types__arrow :global(.types__arrow-prev) {
+    transform: none;
+  }
+
+  @media (min-width: 1024px) {
+    .types__controls {
+      inline-size: auto;
+      min-inline-size: 320px;
+    }
+  }
+
+  /* ------------------------------------------------------------ track */
+  .types__viewport {
+    position: relative;
+  }
+
+  .types__track {
+    display: flex;
+    gap: var(--gutter);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--side, var(--margin));
+    padding-inline: var(--side, var(--margin));
+    padding-block: 4px 28px;
+    scrollbar-width: none;
+    --side: calc((100vw - min(100vw, var(--maxw))) / 2 + var(--margin));
+    cursor: grab;
+  }
+
+  .types__track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .types__track.is-dragging {
+    cursor: grabbing;
+    scroll-snap-type: none;
+    user-select: none;
+  }
+
+  .type {
+    flex: 0 0 min(82vw, 360px);
+    scroll-snap-align: start;
+  }
+
+  @media (min-width: 1024px) {
+    .type {
+      flex-basis: 372px;
+    }
+  }
+
+  .type__card {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    background: #fff;
+    border-radius: var(--r-l);
+    box-shadow: 0 0 0 1px var(--c-line);
+    overflow: hidden;
+    transition: box-shadow 0.45s var(--ease-out), transform 0.6s var(--ease-out);
+  }
+
+  .type__card:hover {
+    box-shadow: 0 0 0 1px var(--c-line-2), var(--shadow-soft);
+  }
+
+  .type.is-picked .type__card {
+    box-shadow: 0 0 0 2px var(--c-deep), 0 22px 44px -24px rgb(28 81 152 / 0.5);
+  }
+
+  .type__visual {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    max-block-size: 52svh;
+    inline-size: 100%;
+    overflow: hidden;
+  }
+
+  .type__photo {
+    position: absolute;
+    inset: 0;
+  }
+
+  .type__photo img {
+    transition: transform 1.4s var(--ease-out);
+  }
+
+  .type__card:hover .type__photo img {
+    transform: scale(1.03);
+    transform-origin: center;
+  }
+
+  .type__visual :global(.pd) {
+    position: absolute;
+    inset: 0;
+  }
+
+  .type__badge {
+    position: absolute;
+    inset-block-end: 12px;
+    inset-inline-start: 12px;
+    max-inline-size: calc(100% - 24px);
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.92);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--c-ink);
+    box-shadow: 0 0 0 1px var(--c-line);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .type__body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+    padding: 22px 22px 22px;
+  }
+
+  .type__num {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--c-deep);
+  }
+
+  .type__name {
+    font-size: var(--t-h3);
+    font-weight: 300;
+    margin-block-start: -6px;
+  }
+
+  .type__facts {
+    display: grid;
+    border-block-start: 1px solid var(--c-line);
+  }
+
+  .type__facts div {
+    display: grid;
+    grid-template-columns: 6.2em 1fr;
+    gap: 12px;
+    padding-block: 10px;
+    border-block-end: 1px solid var(--c-line);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .type__facts dt {
+    color: var(--c-body);
+  }
+
+  .type__facts dd {
+    color: var(--c-ink);
+  }
+
+  .type__best {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--c-ink);
+  }
+
+  .type__best span {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--c-deep);
+    margin-block-end: 2px;
+  }
+
+  .type__pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    align-self: stretch;
+    justify-content: center;
+    margin-block-start: auto;
+    min-block-size: 48px;
+    padding-inline: 18px;
+    border-radius: 999px;
+    border: 1px solid var(--c-line-2);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--c-ink);
+    transition: background-color 0.35s, border-color 0.35s, color 0.35s;
+  }
+
+  .type__pick:hover {
+    border-color: var(--c-deep);
+  }
+
+  .type__pick-dot {
+    display: grid;
+    place-items: center;
+    inline-size: 20px;
+    block-size: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--c-line-2);
+    color: transparent;
+    transition: background 0.35s, border-color 0.35s, color 0.35s;
+  }
+
+  .type__pick[aria-pressed='true'] {
+    background: var(--c-deep);
+    border-color: var(--c-deep);
+    color: #fff;
+  }
+
+  .type__pick[aria-pressed='true'] .type__pick-dot {
+    background: #fff;
+    border-color: #fff;
+    color: var(--c-deep);
+  }
+
+  .type__pick:focus-visible {
+    outline-offset: 3px;
+  }
+
+  .types__note {
+    margin-block-start: 8px;
+    font-size: 0.8125rem;
+    color: var(--c-body);
+  }
+</style>
+
+<script>
+  import { store } from '@/lib/store';
+  import { poolTypeById } from '@/data/site';
+  import { toast } from '@/scripts/toast';
+
+  const track = document.querySelector<HTMLElement>('[data-types-track]')!;
+  const prev = document.querySelector<HTMLButtonElement>('[data-types-prev]')!;
+  const next = document.querySelector<HTMLButtonElement>('[data-types-next]')!;
+  const progress = document.querySelector<HTMLElement>('[data-types-progress]')!;
+  const rtl = getComputedStyle(track).direction === 'rtl';
+
+  // ---- carousel navigation (RTL aware: "next" scrolls toward the inline end)
+  const step = () => (track.querySelector<HTMLElement>('.type')?.offsetWidth ?? 320) + 16;
+
+  function update() {
+    const max = track.scrollWidth - track.clientWidth;
+    const pos = Math.abs(track.scrollLeft);
+    const p = max > 0 ? pos / max : 1;
+    progress.style.setProperty('--p', String(0.12 + p * 0.88));
+    prev.disabled = pos < 4;
+    next.disabled = pos > max - 4;
+  }
+
+  prev.addEventListener('click', () => track.scrollBy({ left: (rtl ? 1 : -1) * step(), behavior: 'smooth' }));
+  next.addEventListener('click', () => track.scrollBy({ left: (rtl ? -1 : 1) * step(), behavior: 'smooth' }));
+  track.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
+  window.addEventListener('resize', update);
+  update();
+
+  // ---- mouse drag-to-scroll (touch uses native swipe)
+  let dragging = false;
+  let moved = false;
+  let startX = 0;
+  let startScroll = 0;
+  track.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    dragging = true;
+    moved = false;
+    startX = e.clientX;
+    startScroll = track.scrollLeft;
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) > 4 && !moved) {
+      moved = true;
+      track.classList.add('is-dragging');
+    }
+    if (moved) track.scrollLeft = startScroll - dx;
+  });
+  window.addEventListener('pointerup', () => {
+    if (!dragging) return;
+    dragging = false;
+    track.classList.remove('is-dragging');
+  });
+  track.addEventListener(
+    'click',
+    (e) => {
+      if (moved) {
+        e.preventDefault();
+        e.stopPropagation();
+        moved = false;
+      }
+    },
+    true,
+  );
+
+  // ---- photos: hotlinked originals are heavy, so they load only when the selector is near
+  // the viewport, and only for cards within about one screen of the visible part of the track.
+  const lazyImgs = Array.from(track.querySelectorAll<HTMLImageElement>('img[data-src]'));
+  const reveal = (img: HTMLImageElement) => {
+    if (!img.dataset.src) return;
+    img.src = img.dataset.src;
+    delete img.dataset.src;
+  };
+  new IntersectionObserver(
+    (entries, outer) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      outer.disconnect();
+      // Observe the cards (each img is a large offset crop) and load their photo.
+      const nearCards = new IntersectionObserver(
+        (es) =>
+          es.forEach((e) => {
+            if (!e.isIntersecting) return;
+            const img = e.target.querySelector<HTMLImageElement>('img[data-src]');
+            if (img) reveal(img);
+            nearCards.unobserve(e.target);
+          }),
+        { root: track, rootMargin: '0px 110% 0px 110%' },
+      );
+      lazyImgs.forEach((img) => nearCards.observe(img.closest('.type')!));
+    },
+    { rootMargin: '45% 0px' },
+  ).observe(track);
+
+  // ---- selection → shared store
+  const cards = Array.from(track.querySelectorAll<HTMLElement>('.type'));
+
+  function render() {
+    const picked = store.get().poolType;
+    cards.forEach((card) => {
+      const on = card.dataset.type === picked;
+      card.classList.toggle('is-picked', on);
+      const btn = card.querySelector<HTMLButtonElement>('[data-pick]')!;
+      btn.setAttribute('aria-pressed', String(on));
+      btn.querySelector('[data-pick-label]')!.textContent = on ? 'נבחרה להצעת המחיר' : 'זו הבריכה שלי';
+    });
+  }
+
+  track.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-pick]');
+    if (!btn) return;
+    const id = btn.dataset.pick as Parameters<typeof poolTypeById>[0];
+    const already = store.get().poolType === id;
+    const patch: Parameters<typeof store.set>[0] = { poolType: already ? null : (id as never) };
+    // Choosing an overflow pool also sets the configurator's edge.
+    if (!already && id === 'overflow') patch.design = { edge: 'overflow' };
+    store.set(patch);
+    if (!already) toast(`${poolTypeById(id)?.short} נוספה לבקשת הצעת המחיר`, { href: '#contact', label: 'להצעת מחיר' });
+  });
+
+  store.subscribe(render);
+  render();
+</script>

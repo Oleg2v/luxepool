@@ -1,0 +1,91 @@
+---
+/**
+ * Accessibility statement (IS 5568 / WCAG 2.2 AA) — template for the concept.
+ */
+import Base from '@/layouts/Base.astro';
+import { company, phones } from '@/data/site';
+---
+<Base title="הצהרת נגישות · לוקספול (קונספט)" description="הצהרת נגישות לאתר הקונספט של לוקספול שירותי בריכות.">
+  <header class="a11y-top">
+    <div class="container">
+      <a href="/" class="a11y-back">חזרה לעמוד הבית</a>
+    </div>
+  </header>
+  <main id="main" class="container a11y">
+    <p class="eyebrow">נגישות</p>
+    <h1>הצהרת נגישות</h1>
+    <p class="a11y__note">טיוטה לאתר הקונספט. לפני עלייה לאוויר יש לעדכן את פרטי רכז הנגישות ואת תאריך הבדיקה.</p>
+
+    <h2>המחויבות שלנו</h2>
+    <p>
+      {company.nameHe} רואה חשיבות במתן שירות שוויוני ונגיש לכל הלקוחות. האתר נבנה כך שיעמוד בדרישות תקן
+      ישראלי 5568 ובהנחיות WCAG 2.2 ברמת AA.
+    </p>
+
+    <h2>מה נעשה באתר</h2>
+    <ul>
+      <li>ניווט מלא במקלדת, עם סימון פוקוס ברור וקישור "דלגו לתוכן הראשי".</li>
+      <li>מבנה כותרות ותגיות סמנטיות, וטקסט חלופי בעברית לכל התמונות.</li>
+      <li>ניגודיות צבעים לפי רמה AA, והתאמה מלאה לכתיבה מימין לשמאל.</li>
+      <li>כיבוד הגדרת "הפחתת תנועה" במערכת: האנימציות מוחלפות בתמונות סטטיות.</li>
+      <li>כפתור לעצירת תנועת המים בראש העמוד.</li>
+      <li>טופס עם תוויות, הודעות שגיאה מקושרות והודעת אישור נגישה.</li>
+      <li>כל מספרי הטלפון לחיצים, וכל המידע זמין גם ללא תלת-ממד.</li>
+    </ul>
+
+    <h2>נתקלתם בבעיה?</h2>
+    <p>
+      נשמח לשמוע ולתקן. אפשר לפנות במייל <a href={`mailto:${company.email}`} class="ltr">{company.email}</a> או בטלפון
+      <a href={`tel:${phones.build.tel}`} class="ltr">{phones.build.display}</a>.
+    </p>
+    <p class="a11y__date">עדכון אחרון: נובמבר 2026</p>
+  </main>
+  <footer class="container a11y-foot">
+    <p lang="en" dir="ltr">Design concept. Not the official Luxepool website.</p>
+  </footer>
+</Base>
+
+<style>
+  .a11y-top {
+    padding-block: 24px;
+    border-block-end: 1px solid var(--c-line);
+  }
+  .a11y-back {
+    color: var(--c-deep);
+    font-weight: 600;
+  }
+  .a11y {
+    max-inline-size: 760px;
+    padding-block: 56px 80px;
+    display: grid;
+    gap: 16px;
+  }
+  .a11y h1 {
+    font-size: var(--t-h2);
+  }
+  .a11y h2 {
+    font-size: 1.5rem;
+    margin-block-start: 20px;
+  }
+  .a11y ul {
+    list-style: disc;
+    padding-inline-start: 1.2em;
+    display: grid;
+    gap: 6px;
+  }
+  .a11y a {
+    color: var(--c-deep);
+  }
+  .a11y__note,
+  .a11y__date {
+    font-size: 0.875rem;
+    padding: 12px 14px;
+    border-radius: var(--r-s);
+    background: var(--c-mist);
+  }
+  .a11y-foot {
+    padding-block: 24px 40px;
+    font-size: 0.8125rem;
+    border-block-start: 1px solid var(--c-line);
+  }
+</style>

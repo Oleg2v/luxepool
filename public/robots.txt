@@ -1,0 +1,3 @@
+# Design concept — not for indexing.
+User-agent: *
+Disallow: /

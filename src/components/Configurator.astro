@@ -1,0 +1,860 @@
+---
+/**
+ * 3 · "Design your pool" — the centrepiece.
+ * Native form controls (radios, checkboxes, RTL range sliders) drive a shared design
+ * state; the 3D scene, the architectural plan, the example price, the quote form and
+ * the WhatsApp message all read from it.
+ */
+import Icon from './Icon.astro';
+import { edges, extras, finishes, shapes, sizeLimits } from '@/data/site';
+import { defaultDesign } from '@/lib/store';
+import { planSvg } from '@/lib/plan-svg';
+import { examplePrice, formatShekel } from '@/lib/pricing';
+import { waLink, quoteMessage } from '@/lib/whatsapp';
+
+const d = defaultDesign();
+const price = examplePrice(d, null);
+const wa = waLink(quoteMessage({ poolType: null, design: d, designTouched: true }));
+
+const shapeIcons: Record<string, string> = {
+  rect: '<rect x="4" y="8" width="24" height="16" rx="1.5"/>',
+  l: '<path d="M4 8h24v16H16v-7H4z"/>',
+  free: '<path d="M6 16c0-6 5-9 10-8s4 4 8 4 4 3 4 6-4 7-9 6-6-3-9-2-4-1-4-6z"/>',
+};
+const fmt1 = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+---
+<section class="section cfg" id="design" aria-labelledby="cfg-title">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow" data-reveal>תכנון</p>
+      <h2 id="cfg-title" data-reveal>תכננו את הבריכה שלכם</h2>
+      <p class="lead" data-reveal style="--reveal-delay:.08s">
+        בחרו צורה, מידות, גימור ותוספות, וקבלו טווח מחיר לדוגמה. את ההצעה הסופית נותנים רק אחרי ביקור בשטח.
+      </p>
+    </div>
+
+    <div class="cfg__layout">
+      <div class="cfg__stage-wrap">
+        <div class="cfg__stage" data-cfg-stage>
+          <div class="cfg__plan" data-cfg-plan set:html={planSvg(d)} />
+          <div class="cfg__canvas" data-cfg-canvas></div>
+          <p class="cfg__dims" aria-hidden="true">
+            <span class="ltr num" data-cfg-dims>{fmt1(d.length)} × {fmt1(d.width)}</span> מ׳
+          </p>
+          <p class="cfg__hint" aria-hidden="true" data-cfg-hint>גררו כדי לסובב</p>
+          <p class="cfg__loading" aria-hidden="true">טוען תלת-ממד…</p>
+        </div>
+      </div>
+
+      <form class="cfg__panel" data-cfg-form aria-labelledby="cfg-title" novalidate>
+        <fieldset class="cfg__group">
+          <legend><span class="cfg__step num ltr">01</span> צורה</legend>
+          <div class="cfg__seg cfg__seg--3">
+            {shapes.map((s) => (
+              <label class="cfg__opt">
+                <input type="radio" name="shape" value={s.id} checked={s.id === d.shape} />
+                <span class="cfg__opt-box">
+                  <svg viewBox="0 0 32 32" aria-hidden="true" set:html={shapeIcons[s.id]} />
+                  <span>{s.label}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset class="cfg__group">
+          <legend><span class="cfg__step num ltr">02</span> מידות</legend>
+          <div class="cfg__range">
+            <label for="cfg-length">אורך</label>
+            <output for="cfg-length" data-out="length"><span class="ltr num">{fmt1(d.length)}</span> מ׳</output>
+            <input
+              id="cfg-length"
+              type="range"
+              name="length"
+              min={sizeLimits.length.min}
+              max={sizeLimits.length.max}
+              step={sizeLimits.length.step}
+              value={d.length}
+              aria-valuetext={`${d.length} מטר`}
+            />
+          </div>
+          <div class="cfg__range">
+            <label for="cfg-width">רוחב</label>
+            <output for="cfg-width" data-out="width"><span class="ltr num">{fmt1(d.width)}</span> מ׳</output>
+            <input
+              id="cfg-width"
+              type="range"
+              name="width"
+              min={sizeLimits.width.min}
+              max={sizeLimits.width.max}
+              step={sizeLimits.width.step}
+              value={d.width}
+              aria-valuetext={`${d.width} מטר`}
+            />
+          </div>
+        </fieldset>
+
+        <fieldset class="cfg__group">
+          <legend><span class="cfg__step num ltr">03</span> שפת הבריכה</legend>
+          <div class="cfg__seg cfg__seg--2">
+            {edges.map((e) => (
+              <label class="cfg__opt">
+                <input type="radio" name="edge" value={e.id} checked={e.id === d.edge} />
+                <span class="cfg__opt-box cfg__opt-box--text">
+                  <span>{e.label}</span>
+                  <small>{e.hint}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset class="cfg__group">
+          <legend><span class="cfg__step num ltr">04</span> גימור <span class="cfg__legend-note" data-cfg-finish-name>{finishes.find((f) => f.id === d.finish)?.label}</span></legend>
+          <div class="cfg__swatches">
+            {finishes.map((f) => (
+              <label class="cfg__swatch" title={f.label}>
+                <input type="radio" name="finish" value={f.id} checked={f.id === d.finish} />
+                <span class="cfg__swatch-dot" style={`--a:${f.swatch[0]};--b:${f.swatch[1]};--t:${f.tile}`}></span>
+                <span class="cfg__swatch-label">{f.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset class="cfg__group">
+          <legend><span class="cfg__step num ltr">05</span> תוספות</legend>
+          <div class="cfg__chips">
+            {extras.map((x) => (
+              <label class="cfg__chip">
+                <input type="checkbox" name="extras" value={x.id} />
+                <span class="cfg__chip-box"><Icon name="check" size={14} /> {x.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div class="cfg__result">
+          <dl class="cfg__facts">
+            <div>
+              <dt>סוג הבריכה</dt>
+              <dd data-cfg-type>טרם נבחר · <a href="#types">לבחירה</a></dd>
+            </div>
+            <div>
+              <dt>שטח מים</dt>
+              <dd><span class="ltr num" data-cfg-area>{price.area.toFixed(1)}</span> מ״ר</dd>
+            </div>
+            <div>
+              <dt>נפח משוער</dt>
+              <dd>
+                <span class="ltr num" data-cfg-volume>{(price.area * sizeLimits.exampleDepth).toFixed(0)}</span> מ״ק
+                <span class="example-tag">לפי עומק {sizeLimits.exampleDepth} מ׳ לדוגמה</span>
+              </dd>
+            </div>
+          </dl>
+          <p class="cfg__type-note" data-cfg-type-note hidden></p>
+
+          <div class="cfg__price" aria-live="polite" aria-atomic="true">
+            <p class="cfg__price-label">טווח מחיר לדוגמה <span class="example-tag">דוגמה בלבד</span></p>
+            <p class="cfg__price-value ltr num" data-cfg-price>
+              {formatShekel(price.low)}<span class="cfg__dash">–</span>{formatShekel(price.high)}
+            </p>
+            <p class="cfg__price-note">זו דוגמה בלבד, לא הצעת מחיר. ההצעה הסופית ניתנת לאחר ביקור בשטח.</p>
+          </div>
+
+          <div class="cfg__actions">
+            <button type="button" class="btn btn--primary btn--block" data-cfg-send>
+              שלחו את התכנון להצעת מחיר
+            </button>
+            <a class="btn btn--ghost btn--block" href={wa} data-wa="design" target="_blank" rel="noopener">
+              <Icon name="whatsapp" class="wa-glyph" /> שלחו את התכנון בוואטסאפ
+              <span class="sr-only">(נפתח בחלון חדש)</span>
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cfg {
+    background: var(--c-white);
+  }
+
+  .cfg__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  /* ------------------------------------------------------------ stage */
+  .cfg__stage-wrap {
+    position: sticky;
+    inset-block-start: calc(var(--header-h) + 8px);
+    z-index: 2;
+    align-self: start;
+    /* white backing so content scrolling under the sticky stage stays clean */
+    background: var(--c-white);
+    padding-block-end: 8px;
+    margin-inline: calc(-1 * var(--margin));
+    padding-inline: var(--margin);
+  }
+
+  .cfg__stage {
+    --dusk: 0;
+    position: relative;
+    block-size: clamp(260px, 44svh, 420px);
+    border-radius: var(--r-l);
+    background: #f2f6f9;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px var(--c-line);
+  }
+
+  .cfg__plan,
+  .cfg__canvas {
+    position: absolute;
+    inset: 0;
+  }
+
+  .cfg__plan {
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    transition: opacity 0.8s var(--ease-out);
+  }
+
+  .cfg__plan :global(svg) {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .cfg__canvas {
+    opacity: 0;
+    transition: opacity 0.9s var(--ease-out);
+  }
+
+  .cfg__canvas :global(canvas) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    cursor: grab;
+  }
+
+  .cfg__stage:global(.is-grabbing) .cfg__canvas :global(canvas) {
+    cursor: grabbing;
+  }
+
+  .cfg__stage.is-3d .cfg__canvas {
+    opacity: 1;
+  }
+
+  .cfg__stage.is-3d .cfg__plan {
+    opacity: 0;
+  }
+
+  .cfg__dims,
+  .cfg__hint,
+  .cfg__loading {
+    position: absolute;
+    z-index: 2;
+    margin: 0;
+    padding: 6px 11px;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    background: rgb(255 255 255 / 0.9);
+    color: var(--c-ink);
+    box-shadow: 0 0 0 1px var(--c-line);
+    pointer-events: none;
+  }
+
+  .cfg__dims {
+    inset-block-start: 14px;
+    inset-inline-start: 14px;
+    font-weight: 600;
+  }
+
+  .cfg__hint {
+    inset-block-end: 14px;
+    inset-inline-end: 14px;
+    opacity: 0;
+    transition: opacity 0.6s;
+  }
+
+  .cfg__stage.is-3d .cfg__hint {
+    opacity: 1;
+  }
+
+  .cfg__stage.is-3d .cfg__hint.is-done {
+    opacity: 0;
+  }
+
+  .cfg__loading {
+    inset-block-end: 14px;
+    inset-inline-end: 14px;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .cfg__stage.is-loading .cfg__loading {
+    opacity: 1;
+  }
+
+  /* ------------------------------------------------------------ panel */
+  .cfg__panel {
+    display: grid;
+    gap: 6px;
+  }
+
+  .cfg__group {
+    margin: 0;
+    padding: 18px 0 20px;
+    border: 0;
+    border-block-start: 1px solid var(--c-line);
+    min-inline-size: 0;
+  }
+
+  .cfg__group legend {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 0;
+    margin-block-end: 14px;
+    font-weight: 600;
+    color: var(--c-ink);
+    float: inline-start;
+    inline-size: 100%;
+  }
+
+  .cfg__group legend + * {
+    clear: both;
+  }
+
+  .cfg__step {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--c-deep);
+    letter-spacing: 0.06em;
+  }
+
+  .cfg__legend-note {
+    margin-inline-start: auto;
+    font-weight: 400;
+    font-size: 0.875rem;
+    color: var(--c-body);
+  }
+
+  /* visually hidden native inputs, focus ring on the visual box */
+  .cfg__opt input,
+  .cfg__swatch input,
+  .cfg__chip input {
+    position: absolute;
+    opacity: 0;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: 0;
+  }
+
+  .cfg__seg {
+    display: grid;
+    gap: 8px;
+  }
+
+  .cfg__seg--3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .cfg__seg--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cfg__opt {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .cfg__opt-box {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    padding: 12px 8px 10px;
+    border-radius: var(--r-m);
+    border: 1px solid var(--c-line-2);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--c-ink);
+    text-align: center;
+    transition: border-color 0.3s, background-color 0.3s, box-shadow 0.3s;
+  }
+
+  .cfg__opt-box svg {
+    inline-size: 34px;
+    block-size: 34px;
+    fill: rgb(110 193 228 / 0.18);
+    stroke: currentColor;
+    stroke-width: 1.2;
+  }
+
+  .cfg__opt-box--text {
+    justify-items: start;
+    text-align: start;
+    padding: 12px 14px;
+    gap: 2px;
+  }
+
+  .cfg__opt-box small {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--c-body);
+  }
+
+  .cfg__opt input:checked + .cfg__opt-box {
+    border-color: var(--c-deep);
+    box-shadow: inset 0 0 0 1px var(--c-deep);
+    background: linear-gradient(200deg, rgb(110 193 228 / 0.12), rgb(28 81 152 / 0.06));
+  }
+
+  .cfg__opt input:checked + .cfg__opt-box svg {
+    fill: rgb(110 193 228 / 0.45);
+    stroke: var(--c-deep);
+  }
+
+  .cfg__opt input:focus-visible + .cfg__opt-box,
+  .cfg__chip input:focus-visible + .cfg__chip-box {
+    outline: 2px solid var(--c-deep);
+    outline-offset: 3px;
+  }
+
+  /* range sliders — native RTL: minimum on the right, the fill grows leftward */
+  .cfg__range {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    row-gap: 6px;
+    margin-block-end: 14px;
+  }
+
+  .cfg__range label {
+    font-size: 0.875rem;
+    color: var(--c-body);
+  }
+
+  .cfg__range output {
+    font-weight: 600;
+    color: var(--c-ink);
+  }
+
+  .cfg__range input[type='range'] {
+    grid-column: 1 / -1;
+    --fill: 50%;
+    inline-size: 100%;
+    block-size: 28px;
+    margin: 0;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .cfg__range input[type='range']::-webkit-slider-runnable-track {
+    block-size: 3px;
+    border-radius: 3px;
+    background: linear-gradient(to left, var(--c-deep) var(--fill), var(--c-haze) var(--fill));
+  }
+
+  .cfg__range input[type='range']::-moz-range-track {
+    block-size: 3px;
+    border-radius: 3px;
+    background: linear-gradient(to left, var(--c-deep) var(--fill), var(--c-haze) var(--fill));
+  }
+
+  .cfg__range input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    inline-size: 26px;
+    block-size: 26px;
+    margin-block-start: -11.5px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--c-line-2);
+    box-shadow: 0 4px 12px -4px rgb(27 36 48 / 0.35), inset 0 0 0 6px #fff, inset 0 0 0 14px var(--c-deep);
+    transition: transform 0.25s var(--ease-out);
+  }
+
+  .cfg__range input[type='range']::-moz-range-thumb {
+    inline-size: 24px;
+    block-size: 24px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--c-line-2);
+    box-shadow: 0 4px 12px -4px rgb(27 36 48 / 0.35), inset 0 0 0 6px #fff, inset 0 0 0 14px var(--c-deep);
+  }
+
+  .cfg__range input[type='range']:active::-webkit-slider-thumb {
+    transform: scale(1.1);
+  }
+
+  .cfg__range input[type='range']:focus-visible {
+    outline: none;
+  }
+
+  .cfg__range input[type='range']:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--c-deep);
+    outline-offset: 3px;
+  }
+
+  .cfg__range input[type='range']:focus-visible::-moz-range-thumb {
+    outline: 2px solid var(--c-deep);
+    outline-offset: 3px;
+  }
+
+  /* finish swatches */
+  .cfg__swatches {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+
+  .cfg__swatch {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: var(--c-body);
+    text-align: center;
+  }
+
+  .cfg__swatch-dot {
+    position: relative;
+    inline-size: 46px;
+    block-size: 46px;
+    border-radius: 50%;
+    background: linear-gradient(200deg, var(--a), var(--b));
+    box-shadow: inset 0 0 0 4px var(--t), 0 0 0 1px var(--c-line-2);
+    transition: box-shadow 0.3s, transform 0.4s var(--ease-out);
+  }
+
+  .cfg__swatch input:checked + .cfg__swatch-dot {
+    box-shadow: inset 0 0 0 4px var(--t), 0 0 0 2px #fff, 0 0 0 3.5px var(--c-deep);
+    transform: scale(1.04);
+  }
+
+  .cfg__swatch input:checked ~ .cfg__swatch-label {
+    color: var(--c-ink);
+    font-weight: 600;
+  }
+
+  .cfg__swatch input:focus-visible + .cfg__swatch-dot {
+    outline: 2px solid var(--c-deep);
+    outline-offset: 5px;
+  }
+
+  /* extras */
+  .cfg__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cfg__chip {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .cfg__chip-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-block-size: 44px;
+    padding-inline: 14px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--c-line-2);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--c-ink);
+    transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+  }
+
+  .cfg__chip-box :global(svg) {
+    inline-size: 16px;
+    block-size: 16px;
+    padding: 1px;
+    border-radius: 50%;
+    border: 1px solid var(--c-line-2);
+    color: transparent;
+    transition: all 0.3s;
+  }
+
+  .cfg__chip input:checked + .cfg__chip-box {
+    border-color: var(--c-deep);
+    background: rgb(28 81 152 / 0.06);
+  }
+
+  .cfg__chip input:checked + .cfg__chip-box :global(svg) {
+    background: var(--c-deep);
+    border-color: var(--c-deep);
+    color: #fff;
+  }
+
+  /* result */
+  .cfg__result {
+    display: grid;
+    gap: 18px;
+    padding-block-start: 18px;
+    border-block-start: 1px solid var(--c-line);
+  }
+
+  .cfg__facts {
+    display: grid;
+    gap: 8px;
+    font-size: 0.875rem;
+  }
+
+  .cfg__facts div {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 12px;
+  }
+
+  .cfg__facts dt {
+    color: var(--c-body);
+  }
+
+  .cfg__facts dd {
+    color: var(--c-ink);
+    font-weight: 500;
+  }
+
+  .cfg__facts a {
+    color: var(--c-deep);
+  }
+
+  .cfg__type-note {
+    font-size: 0.8125rem;
+    color: var(--c-body);
+    padding: 10px 12px;
+    border-radius: var(--r-s);
+    background: var(--c-mist);
+  }
+
+  .cfg__price {
+    position: relative;
+    padding: 20px 20px 18px;
+    border-radius: var(--r-l);
+    background: var(--c-mist);
+    box-shadow: inset 0 0 0 1px var(--c-line);
+    overflow: hidden;
+  }
+
+  .cfg__price::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: 3px;
+    background: var(--grad-bright);
+  }
+
+  .cfg__price-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--c-ink);
+  }
+
+  .cfg__price-value {
+    margin-block: 8px 6px;
+    font: 300 clamp(1.75rem, 1.4rem + 1.4vw, 2.5rem) / 1.1 'Inter Tight', var(--f-ui);
+    letter-spacing: -0.02em;
+    color: var(--c-ink);
+    text-align: end;
+  }
+
+  [dir='rtl'] .cfg__price-value {
+    text-align: right;
+  }
+
+  .cfg__dash {
+    margin-inline: 0.25em;
+    color: var(--c-body);
+  }
+
+  .cfg__price-note {
+    font-size: 0.8125rem;
+    color: var(--c-body);
+  }
+
+  .cfg__actions {
+    display: grid;
+    gap: 10px;
+  }
+
+  .cfg__actions .btn {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.25;
+  }
+
+  /* ------------------------------------------------------------ desktop */
+  @media (min-width: 1024px) {
+    .cfg__layout {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gutter);
+      align-items: start;
+    }
+    .cfg__panel {
+      grid-column: 1 / 5;
+      grid-row: 1;
+    }
+    .cfg__stage-wrap {
+      grid-column: 5 / -1;
+      grid-row: 1;
+      margin-inline: 0;
+      padding: 0;
+      background: none;
+      inset-block-start: calc(var(--header-h) + 24px);
+    }
+    .cfg__stage {
+      block-size: min(calc(100svh - var(--header-h) - 48px), 760px);
+      min-block-size: 520px;
+    }
+  }
+</style>
+
+<script>
+  import { store, type Design } from '@/lib/store';
+  import { planSvg } from '@/lib/plan-svg';
+  import { examplePrice, formatShekel } from '@/lib/pricing';
+  import { finishes, poolTypeById, sizeLimits, type ExtraId } from '@/data/site';
+  import { canRunLiveGL, reducedMotion, whenNear, yieldToMain } from '@/lib/device';
+  import type { ConfiguratorScene } from '@/lib/three/configurator-scene';
+
+  const form = document.querySelector<HTMLFormElement>('[data-cfg-form]')!;
+  const stage = document.querySelector<HTMLElement>('[data-cfg-stage]')!;
+  const planHost = stage.querySelector<HTMLElement>('[data-cfg-plan]')!;
+  const canvasHost = stage.querySelector<HTMLElement>('[data-cfg-canvas]')!;
+  const hint = stage.querySelector<HTMLElement>('[data-cfg-hint]')!;
+  const dims = stage.querySelector<HTMLElement>('[data-cfg-dims]')!;
+  const priceEl = form.querySelector<HTMLElement>('[data-cfg-price]')!;
+  const areaEl = form.querySelector<HTMLElement>('[data-cfg-area]')!;
+  const volumeEl = form.querySelector<HTMLElement>('[data-cfg-volume]')!;
+  const typeEl = form.querySelector<HTMLElement>('[data-cfg-type]')!;
+  const typeNote = form.querySelector<HTMLElement>('[data-cfg-type-note]')!;
+  const finishName = form.querySelector<HTMLElement>('[data-cfg-finish-name]')!;
+  const params = new URLSearchParams(location.search);
+
+  const fmt1 = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+  let scene: ConfiguratorScene | null = null;
+
+  // ---------------------------------------------------- form → store
+  function readForm(): Design {
+    const fd = new FormData(form);
+    const ex = new Set(fd.getAll('extras') as ExtraId[]);
+    return {
+      shape: fd.get('shape') as Design['shape'],
+      length: Number(fd.get('length')),
+      width: Number(fd.get('width')),
+      edge: fd.get('edge') as Design['edge'],
+      finish: fd.get('finish') as Design['finish'],
+      extras: { jacuzzi: ex.has('jacuzzi'), waterfall: ex.has('waterfall'), led: ex.has('led'), cover: ex.has('cover') },
+    };
+  }
+
+  form.addEventListener('input', () => store.set({ design: readForm(), designTouched: true }));
+  form.addEventListener('submit', (e) => e.preventDefault());
+
+  // ---------------------------------------------------- store → UI
+  function setFill(input: HTMLInputElement) {
+    const min = Number(input.min);
+    const max = Number(input.max);
+    input.style.setProperty('--fill', `${((Number(input.value) - min) / (max - min)) * 100}%`);
+  }
+
+  let lastPlanKey = '';
+  function render() {
+    const s = store.get();
+    const d = s.design;
+
+    // Sync controls (state may come from the type selector or session restore).
+    (form.elements.namedItem('shape') as RadioNodeList).value = d.shape;
+    (form.elements.namedItem('edge') as RadioNodeList).value = d.edge;
+    (form.elements.namedItem('finish') as RadioNodeList).value = d.finish;
+    for (const name of ['length', 'width'] as const) {
+      const input = form.elements.namedItem(name) as HTMLInputElement;
+      if (Number(input.value) !== d[name]) input.value = String(d[name]);
+      input.setAttribute('aria-valuetext', `${fmt1(d[name])} מטר`);
+      setFill(input);
+      form.querySelector(`[data-out="${name}"] span`)!.textContent = fmt1(d[name]);
+    }
+    form.querySelectorAll<HTMLInputElement>('input[name="extras"]').forEach((cb) => {
+      cb.checked = d.extras[cb.value as ExtraId];
+    });
+    finishName.textContent = finishes.find((f) => f.id === d.finish)?.label ?? '';
+    dims.textContent = `${fmt1(d.length)} × ${fmt1(d.width)}`;
+
+    const price = examplePrice(d, s.poolType);
+    priceEl.innerHTML = `${formatShekel(price.low)}<span class="cfg__dash">–</span>${formatShekel(price.high)}`;
+    areaEl.textContent = price.area.toFixed(1);
+    volumeEl.textContent = (price.area * sizeLimits.exampleDepth).toFixed(0);
+
+    const type = poolTypeById(s.poolType);
+    typeEl.innerHTML = type ? `${type.short} · <a href="#types">שינוי</a>` : 'טרם נבחר · <a href="#types">לבחירה</a>';
+    typeNote.hidden = !type?.configNote;
+    typeNote.textContent = type?.configNote ?? '';
+
+    // The plan is the instant view and the no-WebGL fallback.
+    const key = JSON.stringify(d);
+    if (key !== lastPlanKey && !stage.classList.contains('is-3d')) {
+      planHost.innerHTML = planSvg(d);
+      lastPlanKey = key;
+    }
+    scene?.update(d, s.poolType);
+  }
+
+  store.subscribe(render);
+  render();
+
+  // ---------------------------------------------------- send to quote
+  form.querySelector('[data-cfg-send]')!.addEventListener('click', () => {
+    store.set({ designTouched: true });
+    window.dispatchEvent(new CustomEvent('lp:send-design'));
+  });
+
+  // ---------------------------------------------------- 3D (lazy)
+  async function load3D() {
+    stage.classList.add('is-loading');
+    try {
+      const { createConfiguratorScene } = await import('@/lib/three/configurator-scene');
+      await yieldToMain();
+      scene = createConfiguratorScene(canvasHost, {
+        design: store.get().design,
+        reduced: reducedMotion(),
+        allowSoftware: params.has('forcegl'),
+        onReady: () => {
+          stage.classList.remove('is-loading');
+          stage.classList.add('is-3d');
+        },
+        onFail: () => {
+          scene?.dispose();
+          scene = null;
+          stage.classList.remove('is-3d', 'is-loading');
+          lastPlanKey = '';
+          render();
+        },
+      });
+    } catch {
+      stage.classList.remove('is-loading');
+    }
+  }
+
+  const hideHint = () => hint.classList.add('is-done');
+  stage.addEventListener('pointerdown', hideHint, { once: true });
+  stage.addEventListener('keydown', hideHint, { once: true });
+
+  whenNear(stage, () => canRunLiveGL() && load3D(), '900px');
+</script>

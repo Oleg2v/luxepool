@@ -1,0 +1,39 @@
+---
+/**
+ * Luxepool — concept home page. One page, nine sections, each with one idea.
+ */
+import Base from '@/layouts/Base.astro';
+import Header from '@/components/Header.astro';
+import Hero from '@/components/Hero.astro';
+import PoolTypes from '@/components/PoolTypes.astro';
+import Configurator from '@/components/Configurator.astro';
+import BuildTimeline from '@/components/BuildTimeline.astro';
+import Projects from '@/components/Projects.astro';
+import Reviews from '@/components/Reviews.astro';
+import UnderOneRoof from '@/components/UnderOneRoof.astro';
+import QuoteForm from '@/components/QuoteForm.astro';
+import Footer from '@/components/Footer.astro';
+import WhatsAppFab from '@/components/WhatsAppFab.astro';
+---
+<Base
+  title="לוקספול · בניית בריכות שחייה | קונספט עיצובי"
+  description="קונספט עיצובי לאתר לוקספול שירותי בריכות: כל סוגי הבריכות, תכנון בתלת-ממד, תהליך הבנייה, פרויקטים והצעת מחיר."
+>
+  <Header />
+  <main id="main">
+    <Hero />
+    <PoolTypes />
+    <Configurator />
+    <BuildTimeline />
+    <Projects />
+    <Reviews />
+    <UnderOneRoof />
+    <QuoteForm />
+  </main>
+  <Footer />
+  <WhatsAppFab />
+</Base>
+
+<script>
+  import '@/scripts/app';
+</script>

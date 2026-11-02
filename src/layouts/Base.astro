@@ -1,0 +1,91 @@
+---
+/**
+ * Document shell: RTL Hebrew, noindex (this is a design concept), self-hosted Google
+ * fonts with preloads, and the tiny inline script that marks JS/motion capability
+ * before first paint so reveal styles never flash.
+ */
+import '@/styles/global.css';
+import plex200 from '@fontsource/ibm-plex-sans-hebrew/files/ibm-plex-sans-hebrew-hebrew-200-normal.woff2?url';
+import plex300 from '@fontsource/ibm-plex-sans-hebrew/files/ibm-plex-sans-hebrew-hebrew-300-normal.woff2?url';
+import plex400 from '@fontsource/ibm-plex-sans-hebrew/files/ibm-plex-sans-hebrew-hebrew-400-normal.woff2?url';
+import heeboHebrew from '@fontsource-variable/heebo/files/heebo-hebrew-wght-normal.woff2?url';
+// Inter Tight subset (Basic Latin, digits, × ± – —): 18 KB instead of 45 KB — see src/assets/fonts/README.md
+import interLatin from '@/assets/fonts/inter-tight-subset.woff2?url';
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+
+const HEBREW = 'U+0307-0308,U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F';
+const LATIN = 'U+0020-007E,U+00A0,U+00B1,U+00B7,U+00D7,U+2013-2014,U+2018-2019,U+201C-201D,U+2022,U+2026,U+2191,U+2193,U+2212';
+
+const fontFaces = [
+  ...[
+    [200, plex200],
+    [300, plex300],
+    [400, plex400],
+  ].map(
+    ([w, url]) =>
+      `@font-face{font-family:'IBM Plex Sans Hebrew';font-style:normal;font-weight:${w};font-display:swap;src:url(${url}) format('woff2');unicode-range:${HEBREW}}`,
+  ),
+  `@font-face{font-family:'Heebo';font-style:normal;font-weight:100 900;font-display:swap;src:url(${heeboHebrew}) format('woff2-variations'),url(${heeboHebrew}) format('woff2');unicode-range:${HEBREW}}`,
+  `@font-face{font-family:'Inter Tight';font-style:normal;font-weight:100 900;font-display:swap;src:url(${interLatin}) format('woff2-variations'),url(${interLatin}) format('woff2');unicode-range:${LATIN}}`,
+].join('');
+---
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Design concept: keep it out of search engines. -->
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="googlebot" content="noindex, nofollow" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="dns-prefetch" href="https://luxepool.co.il" />
+    <link rel="preload" href={plex200} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={heeboHebrew} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={interLatin} as="font" type="font/woff2" crossorigin />
+    <style is:inline set:html={fontFaces}></style>
+    <script is:inline>
+      // Runs before first paint: enables JS-only styles and motion-only reveals.
+      (function (d) {
+        var c = d.documentElement.classList;
+        c.add('js');
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) c.add('motion');
+      })(document);
+    </script>
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">דלגו לתוכן הראשי</a>
+    <slot />
+    <script is:inline>
+      // Scroll reveals: inline so content can never stay hidden if a bundle fails to load.
+      (function () {
+        var d = document.documentElement;
+        if (!d.classList.contains('motion') || !('IntersectionObserver' in window)) return;
+        var io = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e) {
+              if (e.isIntersecting) {
+                e.target.classList.add('is-in');
+                io.unobserve(e.target);
+              }
+            });
+          },
+          { rootMargin: '0px 0px -6% 0px' },
+        );
+        document.querySelectorAll('[data-reveal]').forEach(function (el) {
+          io.observe(el);
+        });
+      })();
+    </script>
+  </body>
+</html>

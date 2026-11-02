@@ -1,0 +1,155 @@
+---
+/**
+ * 6 · "What customers say" — the 4.9 rating, three short quotes in the gist of the
+ * Google reviews (paraphrased, no names), and a link to all reviews.
+ */
+import Icon from './Icon.astro';
+import { company, reviewGist } from '@/data/site';
+---
+<section class="section reviews" id="reviews" aria-labelledby="reviews-title">
+  <div class="container">
+    <div class="rv__top">
+      <div class="section-head">
+        <p class="eyebrow" data-reveal>ביקורות</p>
+        <h2 id="reviews-title" data-reveal>מה לקוחות כותבים עלינו</h2>
+      </div>
+      <div class="rv__score" data-reveal>
+        <p class="rv__num num ltr" aria-hidden="true">{company.googleRating}</p>
+        <div class="rv__score-meta">
+          <span class="rv__stars" aria-hidden="true">
+            {[0, 1, 2, 3, 4].map(() => <Icon name="star" size={18} />)}
+          </span>
+          <p>
+            <span class="sr-only">דירוג {company.googleRating} מתוך 5 </span>
+            מתוך יותר מ-<span class="num">170</span> ביקורות בגוגל
+          </p>
+          <a class="link-arrow" href={company.googleReviewsUrl} target="_blank" rel="noopener">
+            לכל הביקורות בגוגל
+            <Icon name="arrow-out" size={16} />
+            <span class="sr-only">(נפתח בחלון חדש)</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <ul class="rv__list">
+      {reviewGist.map((r, i) => (
+        <li class="rv__item" data-reveal style={`--reveal-delay:${i * 0.08}s`}>
+          <p class="rv__theme">{r.theme}</p>
+          <blockquote class="rv__quote">
+            <p>{r.quote}</p>
+          </blockquote>
+        </li>
+      ))}
+    </ul>
+    <p class="rv__note">הציטוטים מסכמים נושאים שחוזרים בביקורות הגוגל של לוקספול, בניסוח מקוצר וללא שמות.</p>
+  </div>
+</section>
+
+<style>
+  .reviews {
+    background: var(--c-white);
+    border-block-start: 1px solid var(--c-line);
+  }
+
+  .rv__top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+    align-items: end;
+    margin-block-end: clamp(40px, 5vw, 72px);
+  }
+
+  .rv__top .section-head {
+    margin: 0;
+  }
+
+  .rv__score {
+    display: flex;
+    align-items: center;
+    gap: clamp(18px, 3vw, 32px);
+  }
+
+  .rv__num {
+    font: 200 clamp(5rem, 3.6rem + 6vw, 9.5rem) / 0.82 'Inter Tight', var(--f-ui);
+    letter-spacing: -0.05em;
+    background: var(--grad-water);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    padding-block: 0.06em;
+  }
+
+  .rv__score-meta {
+    display: grid;
+    gap: 8px;
+    justify-items: start;
+    font-size: 0.9375rem;
+    color: var(--c-body);
+  }
+
+  .rv__stars {
+    display: inline-flex;
+    gap: 2px;
+    color: var(--c-mid);
+  }
+
+  .rv__list {
+    display: grid;
+    gap: 0;
+  }
+
+  .rv__item {
+    display: grid;
+    gap: 14px;
+    padding-block: 28px;
+    border-block-start: 1px solid var(--c-line);
+  }
+
+  .rv__theme {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--c-deep);
+  }
+
+  .rv__quote {
+    margin: 0;
+  }
+
+  .rv__quote p {
+    font: 300 clamp(1.375rem, 1.15rem + 0.9vw, 1.875rem) / 1.35 var(--f-display);
+    color: var(--c-ink);
+    text-wrap: pretty;
+  }
+
+  .rv__quote p::before {
+    content: '״';
+    color: var(--c-sky);
+    margin-inline-end: 0.05em;
+  }
+
+  .rv__quote p::after {
+    content: '״';
+    color: var(--c-sky);
+  }
+
+  .rv__note {
+    margin-block-start: 18px;
+    font-size: 0.8125rem;
+    color: var(--c-body);
+  }
+
+  @media (min-width: 1024px) {
+    .rv__top {
+      grid-template-columns: 1fr auto;
+    }
+    .rv__list {
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--gutter);
+    }
+    .rv__item {
+      padding-block: 32px 0;
+      padding-inline-end: 24px;
+    }
+  }
+</style>

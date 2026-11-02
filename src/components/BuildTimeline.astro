@@ -1,0 +1,480 @@
+---
+/**
+ * 4 · "From excavation to the first swim" — scroll-driven build.
+ * A tall track with a sticky stage; ScrollTrigger maps scroll to 0 → 1 and the 3D pool
+ * builds itself. Stage titles are real buttons (jump to a stage). Reduced motion: no
+ * scroll scrubbing, the list becomes a stepper. No WebGL: a clean vertical timeline.
+ */
+import { stages } from '@/data/site';
+---
+<section class="tl" id="build" aria-labelledby="tl-title">
+  <div class="container tl__head">
+    <div class="section-head">
+      <p class="eyebrow" data-reveal>איך בונים</p>
+      <h2 id="tl-title" data-reveal>מהחפירה ועד השחייה הראשונה</h2>
+      <p class="lead" data-reveal style="--reveal-delay:.08s">
+        שבעה שלבים, ובכל אחד מהם עובדים הצוותים של לוקספול עצמם. גללו, והבריכה תיבנה מול העיניים.
+      </p>
+    </div>
+  </div>
+
+  <div class="tl__track" data-tl-track style={`--stages:${stages.length}`}>
+    <div class="tl__sticky">
+      <div class="tl__grid container">
+        <ol class="tl__list" data-tl-list aria-label="שלבי הבנייה">
+          {stages.map((s, i) => (
+            <li class="tl__item" data-tl-item={i}>
+              <button type="button" class="tl__btn" data-tl-step={i}>
+                <span class="tl__num num ltr">{String(i + 1).padStart(2, '0')}</span>
+                <span class="tl__title">{s.title}</span>
+                <span class="tl__text">{s.text}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+
+        <div class="tl__visual" data-tl-visual>
+          <div class="tl__canvas" data-tl-canvas></div>
+          <p class="tl__badge"><span class="tl__badge-dot" aria-hidden="true"></span>בכל שלב: צוות לוקספול</p>
+          <div class="tl__meter" aria-hidden="true">
+            {stages.map(() => <span><i></i></span>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container tl__cta">
+    <a class="link-arrow" href="#contact">
+      השלב הראשון הוא שיחה. קבעו פגישת תכנון
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-flip-rtl"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6"/></svg>
+    </a>
+  </div>
+</section>
+
+<style>
+  .tl {
+    position: relative;
+    background: var(--c-mist);
+    padding-block: clamp(88px, 11vw, 160px) clamp(64px, 8vw, 120px);
+  }
+
+  .tl__head .section-head {
+    margin-block-end: clamp(24px, 3vw, 40px);
+  }
+
+  .tl__track {
+    position: relative;
+    block-size: calc(var(--stages) * 58svh + 100svh);
+  }
+
+  .tl__sticky {
+    position: sticky;
+    inset-block-start: var(--header-h);
+    block-size: calc(100svh - var(--header-h));
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .tl__grid {
+    position: relative;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding-block: 12px 16px;
+    inline-size: 100%;
+  }
+
+  .tl__visual {
+    position: relative;
+    grid-row: 1;
+    min-block-size: 0;
+    border-radius: var(--r-l);
+    overflow: hidden;
+  }
+
+  .tl__canvas {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 1s var(--ease-out);
+  }
+
+  .tl__canvas :global(canvas) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .tl.is-3d .tl__canvas {
+    opacity: 1;
+  }
+
+  .tl__badge {
+    position: absolute;
+    inset-block-start: 12px;
+    inset-inline-start: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.92);
+    box-shadow: 0 0 0 1px var(--c-line);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--c-ink);
+  }
+
+  .tl__badge-dot {
+    inline-size: 8px;
+    block-size: 8px;
+    border-radius: 50%;
+    background: var(--grad-bright);
+    box-shadow: 0 0 0 3px rgb(43 225 245 / 0.18);
+  }
+
+  .tl__meter {
+    position: absolute;
+    inset-block-end: 14px;
+    inset-inline: 14px;
+    display: grid;
+    grid-template-columns: repeat(var(--stages, 7), 1fr);
+    gap: 4px;
+  }
+
+  .tl__meter span {
+    block-size: 2px;
+    background: rgb(27 36 48 / 0.12);
+    overflow: hidden;
+  }
+
+  .tl__meter i {
+    display: block;
+    block-size: 100%;
+    background: var(--c-deep);
+    transform-origin: right;
+    transform: scaleX(var(--k, 0));
+  }
+
+  /* list: on mobile only the active stage is shown, as a caption under the model */
+  .tl__list {
+    grid-row: 2;
+    position: relative;
+    min-block-size: 112px;
+  }
+
+  .tl__item {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 0;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.45s var(--ease-out), transform 0.6s var(--ease-out);
+    pointer-events: none;
+  }
+
+  .tl__item.is-active {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .tl__btn {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 14px;
+    row-gap: 4px;
+    inline-size: 100%;
+    text-align: start;
+    padding: 4px 0;
+    color: var(--c-body);
+  }
+
+  .tl__btn:focus-visible {
+    outline-offset: 4px;
+  }
+
+  .tl__item:not(.is-active) .tl__btn:focus-visible {
+    /* keyboard focus on a hidden stage brings it forward */
+    position: relative;
+  }
+
+  .tl__num {
+    grid-row: 1 / span 2;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--c-deep);
+    padding-block-start: 0.45em;
+  }
+
+  .tl__title {
+    font: 300 1.75rem / 1.15 var(--f-display);
+    color: var(--c-ink);
+  }
+
+  .tl__text {
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    max-inline-size: 42ch;
+  }
+
+  .tl__cta {
+    margin-block-start: clamp(28px, 4vw, 48px);
+  }
+
+  .tl__cta svg {
+    inline-size: 16px;
+    block-size: 16px;
+  }
+
+  @media (min-width: 1024px) {
+    .tl__grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-template-rows: 1fr;
+      column-gap: var(--gutter);
+      padding-block: 20px 28px;
+    }
+    .tl__list {
+      grid-column: 1 / 5;
+      grid-row: 1;
+      align-self: center;
+      display: grid;
+      gap: 2px;
+      min-block-size: 0;
+    }
+    .tl__item {
+      position: relative;
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
+    }
+    .tl__btn {
+      padding: 12px 18px 12px 0;
+      border-inline-start: 1px solid var(--c-line-2);
+      padding-inline-start: 20px;
+      transition: border-color 0.4s, color 0.4s;
+    }
+    .tl__title {
+      font-size: 1.25rem;
+      color: var(--c-body);
+      transition: color 0.4s, font-size 0.5s var(--ease-out);
+    }
+    .tl__text {
+      display: grid;
+      grid-template-rows: 0fr;
+      overflow: hidden;
+      opacity: 0;
+      max-block-size: 0;
+      transition: opacity 0.5s, max-block-size 0.6s var(--ease-out);
+    }
+    .tl__item.is-active .tl__btn {
+      border-inline-start-color: var(--c-deep);
+      border-inline-start-width: 2px;
+      padding-inline-start: 19px;
+    }
+    .tl__item.is-active .tl__title {
+      color: var(--c-ink);
+      font-size: 1.75rem;
+    }
+    .tl__item.is-active .tl__text {
+      opacity: 1;
+      max-block-size: 6em;
+    }
+    .tl__item.is-past .tl__title {
+      color: var(--c-ink);
+    }
+    .tl__visual {
+      grid-column: 5 / -1;
+      grid-row: 1;
+    }
+  }
+
+  /* Reduced motion: no scroll scrubbing — the list is a stepper. */
+  .tl.is-stepper .tl__track {
+    block-size: auto;
+  }
+  .tl.is-stepper .tl__sticky {
+    position: relative;
+    inset-block-start: 0;
+    block-size: min(86svh, 760px);
+  }
+
+  /* Stepper on small screens: the model, then every stage as a selectable row. */
+  @media (max-width: 1023px) {
+    .tl.is-stepper .tl__sticky {
+      block-size: auto;
+    }
+    .tl.is-stepper .tl__grid {
+      grid-template-rows: min(56svh, 460px) auto;
+    }
+    .tl.is-stepper .tl__list {
+      display: grid;
+      min-block-size: 0;
+    }
+    .tl.is-stepper .tl__item {
+      position: relative;
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
+      border-block-start: 1px solid var(--c-line);
+    }
+    .tl.is-stepper .tl__btn {
+      padding-block: 12px;
+    }
+    .tl.is-stepper .tl__title {
+      font-size: 1.25rem;
+    }
+    .tl.is-stepper .tl__item:not(.is-active) .tl__text {
+      display: none;
+    }
+    .tl.is-stepper .tl__item.is-active .tl__title {
+      color: var(--c-deep);
+    }
+  }
+
+  /* No WebGL: a plain vertical timeline. */
+  .tl.is-static .tl__track {
+    block-size: auto;
+  }
+  .tl.is-static .tl__sticky {
+    position: static;
+    block-size: auto;
+  }
+  .tl.is-static .tl__visual {
+    display: none;
+  }
+  .tl.is-static .tl__grid {
+    display: block;
+  }
+  .tl.is-static .tl__list {
+    display: grid;
+    gap: 0;
+    min-block-size: 0;
+  }
+  .tl.is-static .tl__item {
+    position: relative;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    border-block-start: 1px solid var(--c-line);
+  }
+  .tl.is-static .tl__btn {
+    padding-block: 18px;
+    border: 0;
+    cursor: default;
+  }
+  .tl.is-static .tl__text {
+    opacity: 1;
+    max-block-size: none;
+    display: block;
+  }
+  .tl.is-static .tl__title {
+    font-size: 1.5rem;
+    color: var(--c-ink);
+  }
+</style>
+
+<script>
+  import { stages } from '@/data/site';
+  import { canRunLiveGL, lowPower, reducedMotion, whenNear, yieldToMain } from '@/lib/device';
+  import type { TimelineScene } from '@/lib/three/timeline-scene';
+
+  const section = document.querySelector<HTMLElement>('.tl')!;
+  const track = section.querySelector<HTMLElement>('[data-tl-track]')!;
+  const items = Array.from(section.querySelectorAll<HTMLElement>('[data-tl-item]'));
+  const buttons = Array.from(section.querySelectorAll<HTMLButtonElement>('[data-tl-step]'));
+  const meters = Array.from(section.querySelectorAll<HTMLElement>('.tl__meter i'));
+  const canvasHost = section.querySelector<HTMLElement>('[data-tl-canvas]')!;
+  const params = new URLSearchParams(location.search);
+  const N = stages.length;
+  const reduced = reducedMotion();
+  const canGL = !lowPower() || params.has('forcegl');
+
+  let scene: TimelineScene | null = null;
+  let current = -1;
+  let progress = reduced ? 1 : 0;
+
+  function setActive(i: number) {
+    if (i === current) return;
+    current = i;
+    items.forEach((el, k) => {
+      el.classList.toggle('is-active', k === i);
+      el.classList.toggle('is-past', k < i);
+    });
+    buttons.forEach((b, k) => {
+      if (k === i) b.setAttribute('aria-current', 'step');
+      else b.removeAttribute('aria-current');
+    });
+  }
+
+  function onProgress(p: number) {
+    progress = p;
+    scene?.setProgress(p);
+    setActive(Math.min(N - 1, Math.floor(p * N * 0.9999)));
+    meters.forEach((m, k) => m.style.setProperty('--k', String(Math.min(1, Math.max(0, p * N - k)))));
+  }
+
+  if (!canGL) {
+    section.classList.add('is-static');
+    items.forEach((el) => el.classList.add('is-active'));
+  } else if (reduced) {
+    section.classList.add('is-stepper');
+    onProgress(1);
+    buttons.forEach((b, i) => b.addEventListener('click', () => onProgress((i + 0.999) / N)));
+  } else {
+    onProgress(0);
+    // Scroll → progress through GSAP ScrollTrigger (shares Lenis' scroll via motion.ts).
+    whenNear(track, async () => {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([import('gsap'), import('gsap/ScrollTrigger')]);
+      gsap.registerPlugin(ScrollTrigger);
+      const header = () => (document.querySelector('[data-hdr]') as HTMLElement)?.offsetHeight ?? 64;
+      const st = ScrollTrigger.create({
+        trigger: track,
+        start: () => `top ${header()}px`,
+        end: 'bottom bottom',
+        onUpdate: (self) => onProgress(self.progress),
+        invalidateOnRefresh: true,
+      });
+      onProgress(st.progress);
+      buttons.forEach((b, i) =>
+        b.addEventListener('click', () => {
+          const y = st.start + ((i + 0.55) / N) * (st.end - st.start);
+          const lenis = (window as Window & { __lenis?: { scrollTo(y: number, o?: object): void } }).__lenis;
+          if (lenis) lenis.scrollTo(y, { duration: 1.2 });
+          else window.scrollTo({ top: y, behavior: 'smooth' });
+        }),
+      );
+    }, '1200px');
+  }
+
+  function goStatic() {
+    scene?.dispose();
+    scene = null;
+    section.classList.remove('is-3d', 'is-stepper');
+    section.classList.add('is-static');
+    items.forEach((el) => el.classList.add('is-active'));
+  }
+
+  if (canGL) {
+    whenNear(section, async () => {
+      if (!canRunLiveGL()) return goStatic();
+      try {
+        const { createTimelineScene } = await import('@/lib/three/timeline-scene');
+        await yieldToMain();
+        scene = createTimelineScene(canvasHost, {
+          reduced,
+          allowSoftware: params.has('forcegl'),
+          background: getComputedStyle(section).backgroundColor || '#f5f8fb',
+          onReady: () => section.classList.add('is-3d'),
+          onFail: goStatic,
+        });
+        scene.setProgress(progress);
+      } catch {
+        goStatic();
+      }
+    }, '900px');
+  }
+</script>

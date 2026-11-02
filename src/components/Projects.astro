@@ -1,0 +1,568 @@
+---
+/**
+ * 5 · Projects — an editorial index with one large "lens" at a time.
+ * The source photos are circular crops inside Luxepool's social graphics; the lens shows
+ * exactly the clean photograph. Changing project sends a soft ripple across the lens.
+ * The Big Brother pool (2023, 2025) is a highlighted case below.
+ */
+import Icon from './Icon.astro';
+import heroPoster from '@/assets/posters/hero-water.jpg';
+import { getImage } from 'astro:assets';
+import { company, projects } from '@/data/site';
+import { circleCrop, cropStyle } from '@/lib/crop';
+
+const first = projects[0];
+// Dial ticks as two paths (minor/major) instead of 72 elements.
+const tick = (i: number, r1: number) => {
+  const a = (i / 72) * Math.PI * 2;
+  const f = (n: number) => n.toFixed(2);
+  return `M${f(100 + Math.cos(a) * r1)} ${f(100 + Math.sin(a) * r1)}L${f(100 + Math.cos(a) * 99)} ${f(100 + Math.sin(a) * 99)}`;
+};
+const dialMinor = Array.from({ length: 72 }, (_, i) => (i % 6 ? tick(i, 97.2) : '')).join('');
+const dialMajor = Array.from({ length: 72 }, (_, i) => (i % 6 ? '' : tick(i, 95.5))).join('');
+const texture = await getImage({ src: heroPoster, width: 900, format: 'webp' });
+const data = projects.map((p) => ({
+  city: p.city,
+  size: p.size,
+  type: p.type,
+  src: p.photo.src,
+  alt: p.photo.alt,
+  crop: cropStyle(circleCrop(p.photo)),
+}));
+---
+<section class="section projects" id="projects" aria-labelledby="projects-title">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow" data-reveal>פרויקטים</p>
+      <h2 id="projects-title" data-reveal>בריכות שבנינו</h2>
+      <p class="lead" data-reveal style="--reveal-delay:.08s">
+        מאשדוד ועד ירושלים, באר שבע וקדימה צורן. כל תמונה כאן היא פרויקט אמיתי של לוקספול.
+      </p>
+    </div>
+
+    <div class="pj" data-pj>
+      <figure class="pj__lens" data-reveal>
+        <div class="pj__stage">
+        <div class="pj__frame" data-pj-frame>
+          <div class="crop pj__layer" style={data[0].crop}>
+            <img src={first.photo.src} alt={first.photo.alt} width="1600" height="900" loading="lazy" decoding="async" />
+          </div>
+          <span class="pj__ring" aria-hidden="true"></span>
+          <span class="pj__ring pj__ring--2" aria-hidden="true"></span>
+        </div>
+        <svg class="pj__dial" viewBox="0 0 200 200" aria-hidden="true">
+          <circle cx="100" cy="100" r="99" fill="none" stroke="#1B2430" stroke-opacity="0.14" stroke-width="0.4" />
+          <path d={dialMinor} fill="none" stroke="#1B2430" stroke-opacity="0.16" stroke-width="0.4" />
+          <path d={dialMajor} fill="none" stroke="#1B2430" stroke-opacity="0.35" stroke-width="0.4" />
+        </svg>
+        </div>
+        <figcaption class="pj__caption" aria-live="polite">
+          <span class="pj__count num ltr"><span data-pj-index>01</span> / {String(projects.length).padStart(2, '0')}</span>
+          <span class="pj__city" data-pj-city>{first.city}</span>
+          <span class="pj__meta">
+            <span class="ltr num" data-pj-size>{first.size}</span>
+            <span class="pj__sep" aria-hidden="true"></span>
+            <span data-pj-type>{first.type}</span>
+          </span>
+        </figcaption>
+        <div class="pj__nav">
+          <button type="button" class="pj__arrow" data-pj-prev aria-label="הפרויקט הקודם">
+            <Icon name="arrow" size={20} class="pj__arrow-prev" />
+          </button>
+          <button type="button" class="pj__arrow" data-pj-next aria-label="הפרויקט הבא">
+            <Icon name="arrow" size={20} />
+          </button>
+        </div>
+      </figure>
+
+      <div class="pj__index-wrap">
+        <p class="pj__index-label">אינדקס פרויקטים</p>
+        <ol class="pj__index" data-pj-list>
+          {projects.map((p, i) => (
+            <li>
+              <button type="button" data-pj-go={i} aria-current={i === 0 ? 'true' : undefined}>
+                <span class="pj__i num ltr">{String(i + 1).padStart(2, '0')}</span>
+                <span class="pj__i-city">{p.city}</span>
+                <span class="pj__i-size ltr num">{p.size}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+
+    <aside class="bb" aria-labelledby="bb-title" data-reveal style={`--tex:url(${texture.src})`}>
+      <div class="bb__inner">
+        <p class="bb__eyebrow">פרויקט נבחר</p>
+        <h3 id="bb-title" class="bb__title">הבריכה של<br />האח הגדול</h3>
+        <p class="bb__years num ltr"><span>2023</span><span>2025</span></p>
+        <p class="bb__text">בנינו את הבריכה בבית האח הגדול ב-2023, וחזרנו לבנות אותה שוב ב-2025.</p>
+      </div>
+      <img class="bb__logo" src={company.logoWhite} alt="לוקספול" width="799" height="231" loading="lazy" decoding="async" />
+    </aside>
+  </div>
+  <script type="application/json" data-pj-data set:html={JSON.stringify(data)} />
+</section>
+
+<style>
+  @property --r {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 0%;
+  }
+
+  .projects {
+    background: var(--c-white);
+  }
+
+  .pj {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px;
+    align-items: center;
+  }
+
+  /* --------------------------------------------------------------- lens */
+  .pj__lens {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 22px;
+    margin: 0;
+  }
+
+  .pj__stage {
+    position: relative;
+    inline-size: min(100%, 580px, 62svh);
+    aspect-ratio: 1;
+  }
+
+  .pj__frame {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    isolation: isolate;
+    background: var(--c-haze);
+    box-shadow: 0 40px 80px -48px rgb(28 81 152 / 0.55);
+    touch-action: pan-y;
+  }
+
+  .pj__layer {
+    position: absolute;
+    inset: 0;
+  }
+
+  .pj__layer.is-entering {
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 calc(var(--r) - 9%), transparent var(--r));
+    mask-image: radial-gradient(circle at 50% 50%, #000 calc(var(--r) - 9%), transparent var(--r));
+    z-index: 1;
+  }
+
+  .pj__ring {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: 50%;
+    border: 1.5px solid rgb(255 255 255 / 0.75);
+    box-shadow: 0 0 24px rgb(110 193 228 / 0.45), inset 0 0 24px rgb(255 255 255 / 0.25);
+    opacity: 0;
+    transform: scale(0);
+    pointer-events: none;
+  }
+
+  .pj__dial {
+    position: absolute;
+    inset: -14px;
+    inline-size: calc(100% + 28px);
+    block-size: calc(100% + 28px);
+    pointer-events: none;
+  }
+
+  .pj__caption {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .pj__count {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--c-deep);
+  }
+
+  .pj__city {
+    font: 300 var(--t-h3) / 1.1 var(--f-display);
+    font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.75rem);
+    color: var(--c-ink);
+  }
+
+  .pj__meta {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 6px 10px;
+    font-size: 0.9375rem;
+  }
+
+  .pj__sep {
+    inline-size: 4px;
+    block-size: 4px;
+    border-radius: 50%;
+    background: var(--c-line-2);
+  }
+
+  .pj__nav {
+    display: flex;
+    gap: 8px;
+  }
+
+  .pj__arrow {
+    display: grid;
+    place-items: center;
+    inline-size: 52px;
+    block-size: 52px;
+    border-radius: 50%;
+    border: 1px solid var(--c-line-2);
+    color: var(--c-ink);
+    background: #fff;
+    transition: border-color 0.3s, color 0.3s;
+  }
+
+  .pj__arrow:hover {
+    border-color: var(--c-deep);
+    color: var(--c-deep);
+  }
+
+  .pj__arrow :global(.pj__arrow-prev) {
+    transform: none;
+  }
+
+  /* -------------------------------------------------------------- index */
+  .pj__index-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--c-body);
+    margin-block-end: 10px;
+  }
+
+  .pj__index {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-block-end: 6px;
+    margin-inline: calc(-1 * var(--margin));
+    padding-inline: var(--margin);
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .pj__index::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pj__index li {
+    flex: none;
+    scroll-snap-align: start;
+  }
+
+  .pj__index button {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    min-block-size: 44px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--c-line-2);
+    font-size: 0.875rem;
+    color: var(--c-ink);
+    white-space: nowrap;
+    transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+  }
+
+  .pj__i {
+    font-size: 0.6875rem;
+    color: var(--c-body);
+  }
+
+  .pj__i-size {
+    display: none;
+  }
+
+  .pj__index button[aria-current='true'] {
+    border-color: var(--c-deep);
+    background: var(--c-deep);
+    color: #fff;
+  }
+
+  .pj__index button[aria-current='true'] .pj__i {
+    color: rgb(255 255 255 / 0.8);
+  }
+
+  @media (min-width: 1024px) {
+    .pj {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gutter);
+    }
+    .pj__index-wrap {
+      grid-column: 1 / 5;
+      grid-row: 1;
+      align-self: center;
+    }
+    .pj__lens {
+      grid-column: 6 / -1;
+      grid-row: 1;
+    }
+    .pj__index {
+      display: grid;
+      gap: 0;
+      overflow: visible;
+      margin: 0;
+      padding: 0;
+      border-block-start: 1px solid var(--c-line);
+    }
+    .pj__index button {
+      display: grid;
+      grid-template-columns: 2.4em 1fr auto;
+      inline-size: 100%;
+      border: 0;
+      border-radius: 0;
+      border-block-end: 1px solid var(--c-line);
+      padding: 13px 4px;
+      font-size: 1.0625rem;
+      text-align: start;
+    }
+    .pj__i-size {
+      display: inline;
+      font-size: 0.875rem;
+      color: var(--c-body);
+    }
+    .pj__index button:hover {
+      color: var(--c-deep);
+    }
+    .pj__index button[aria-current='true'] {
+      background: none;
+      color: var(--c-deep);
+      border-block-end-color: var(--c-deep);
+    }
+    .pj__index button[aria-current='true'] .pj__i {
+      color: var(--c-deep);
+    }
+  }
+
+  /* --------------------------------------------------------- Big Brother */
+  .bb {
+    position: relative;
+    display: grid;
+    margin-block-start: clamp(72px, 9vw, 128px);
+    padding: clamp(28px, 5vw, 64px);
+    min-block-size: clamp(360px, 42vw, 520px);
+    border-radius: var(--r-l);
+    overflow: hidden;
+    color: #fff;
+    background: linear-gradient(200deg, #6ec1e4 -70%, #1c5198 36%, #163f78 100%);
+    isolation: isolate;
+  }
+
+  .bb::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--tex) right top / cover no-repeat;
+    mix-blend-mode: soft-light;
+    opacity: 0.45;
+    /* water texture only in the upper part, never behind the text */
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 34%);
+    mask-image: linear-gradient(180deg, #000 0%, transparent 34%);
+  }
+
+  .bb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(0deg, rgb(18 48 94 / 0.6), transparent 72%);
+  }
+
+  .bb__inner {
+    align-self: end;
+    display: grid;
+    gap: 14px;
+    max-inline-size: 640px;
+  }
+
+  .bb__eyebrow {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: rgb(255 255 255 / 0.92);
+  }
+
+  .bb__title {
+    color: #fff;
+    font-size: clamp(2.5rem, 1.6rem + 3.8vw, 5rem);
+    font-weight: 200;
+    line-height: 1;
+  }
+
+  .bb__years {
+    display: flex;
+    gap: 18px;
+    justify-content: flex-end;
+    font-size: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+    font-weight: 300;
+  }
+
+  .bb__years span + span::before {
+    content: '';
+    display: inline-block;
+    inline-size: 28px;
+    block-size: 1px;
+    margin-inline: 0 18px;
+    vertical-align: middle;
+    background: rgb(255 255 255 / 0.6);
+  }
+
+  .bb__text {
+    font-size: var(--t-lead);
+    line-height: 1.55;
+    max-inline-size: 34ch;
+    color: #fff;
+  }
+
+  .bb__logo {
+    position: absolute;
+    inset-block-start: clamp(24px, 4vw, 48px);
+    inset-inline-end: clamp(24px, 4vw, 48px);
+    inline-size: clamp(120px, 14vw, 180px);
+    block-size: auto;
+    opacity: 0.95;
+  }
+</style>
+
+<script>
+  import { reducedMotion } from '@/lib/device';
+
+  interface Item {
+    city: string;
+    size: string;
+    type: string;
+    src: string;
+    alt: string;
+    crop: string;
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-pj]')!;
+  const data = JSON.parse(document.querySelector('[data-pj-data]')!.textContent || '[]') as Item[];
+  const frame = root.querySelector<HTMLElement>('[data-pj-frame]')!;
+  const rings = Array.from(frame.querySelectorAll<HTMLElement>('.pj__ring'));
+  const city = root.querySelector<HTMLElement>('[data-pj-city]')!;
+  const size = root.querySelector<HTMLElement>('[data-pj-size]')!;
+  const type = root.querySelector<HTMLElement>('[data-pj-type]')!;
+  const index = root.querySelector<HTMLElement>('[data-pj-index]')!;
+  const list = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-pj-go]'));
+  const reduced = reducedMotion();
+
+  let current = 0;
+  let busy = false;
+
+  function layerFor(item: Item) {
+    const layer = document.createElement('div');
+    layer.className = 'crop pj__layer';
+    layer.setAttribute('style', item.crop);
+    const img = new Image(1600, 900);
+    img.decoding = 'async';
+    img.alt = item.alt;
+    img.src = item.src;
+    layer.append(img);
+    return { layer, img };
+  }
+
+  function preload(i: number) {
+    const img = new Image();
+    img.src = data[(i + data.length) % data.length].src;
+  }
+
+  async function show(i: number) {
+    i = (i + data.length) % data.length;
+    if (i === current || busy) return;
+    busy = true;
+    const item = data[i];
+    const { layer, img } = layerFor(item);
+    // Wait for the photo (max 2.5 s) so the ripple never reveals an empty lens.
+    await Promise.race([img.decode().catch(() => undefined), new Promise((r) => setTimeout(r, 2500))]);
+    const old = frame.querySelector<HTMLElement>('.pj__layer:not(.is-entering)');
+
+    city.textContent = item.city;
+    size.textContent = item.size;
+    type.textContent = item.type;
+    index.textContent = String(i + 1).padStart(2, '0');
+    list.forEach((b, k) => (k === i ? b.setAttribute('aria-current', 'true') : b.removeAttribute('aria-current')));
+    current = i;
+
+    if (reduced) {
+      layer.style.opacity = '0';
+      frame.prepend(layer);
+      layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, fill: 'forwards' }).finished.then(() => {
+        layer.style.opacity = '';
+        old?.remove();
+        busy = false;
+      });
+      preload(i + 1);
+      return;
+    }
+
+    layer.classList.add('is-entering');
+    frame.insertBefore(layer, rings[0]);
+    const dur = 1150;
+    const ease = 'cubic-bezier(0.32, 0.72, 0, 1)';
+    const reveal = layer.animate([{ '--r': '0%' }, { '--r': '82%' }] as Keyframe[], { duration: dur, easing: ease, fill: 'forwards' });
+    img.animate([{ transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: dur + 300, easing: ease });
+    old?.animate([{ transform: 'scale(1)', filter: 'brightness(1)' }, { transform: 'scale(1.035)', filter: 'brightness(1.08)' }], { duration: dur, easing: ease, fill: 'forwards' });
+    rings.forEach((r, k) =>
+      r.animate(
+        [
+          { transform: 'scale(0.05)', opacity: 0 },
+          { opacity: 0.9, offset: 0.18 },
+          { transform: 'scale(1.05)', opacity: 0 },
+        ],
+        { duration: dur + k * 240, delay: k * 140, easing: 'cubic-bezier(0.2, 0.6, 0.3, 1)' },
+      ),
+    );
+    await reveal.finished.catch(() => undefined);
+    layer.classList.remove('is-entering');
+    reveal.cancel();
+    old?.remove();
+    busy = false;
+    preload(i + 1);
+  }
+
+  root.querySelector('[data-pj-next]')!.addEventListener('click', () => show(current + 1));
+  root.querySelector('[data-pj-prev]')!.addEventListener('click', () => show(current - 1));
+  list.forEach((b, i) => b.addEventListener('click', () => show(i)));
+
+  // Swipe on the lens. In RTL the next project comes from the left, so a rightward swipe advances.
+  let sx = 0;
+  let sy = 0;
+  frame.addEventListener('pointerdown', (e) => {
+    sx = e.clientX;
+    sy = e.clientY;
+  });
+  frame.addEventListener('pointerup', (e) => {
+    const dx = e.clientX - sx;
+    if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(e.clientY - sy) * 1.4) show(current + (dx > 0 ? 1 : -1));
+  });
+
+  // Warm the next photo once the section is close.
+  new IntersectionObserver((entries, io) => {
+    if (entries.some((e) => e.isIntersecting)) {
+      preload(1);
+      io.disconnect();
+    }
+  }, { rootMargin: '400px' }).observe(root);
+</script>
