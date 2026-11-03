@@ -68,11 +68,18 @@ resources are needed; the hero still is pre-optimised in `public/img` (`npm run 
   lists, stores the phone in E.164 (`+972…`), recomputes the design summary and the example price on
   the server, keeps the page only as a same-origin path, and uses prepared statements.
 - Abuse limits: an edge rate limiter (`ratelimits` binding `QUOTE_LIMITER`, 5 per minute per
-  visitor) plus an atomic D1 limit of 5 requests per visitor per 10 minutes (IPv6 is limited per /64).
+  visitor) plus one atomic D1 statement that allows 5 requests per visitor per 10 minutes (IPv6 is
+  limited per /64; the window survives midnight) and 300 per hour for all visitors together.
   The visitor key stored in `ip_hash` is an HMAC with the Worker secret `IP_HASH_KEY` (set once with
   `openssl rand -hex 32 | npx wrangler secret put IP_HASH_KEY`), so raw IPs are never stored.
 - Honeypot hits are stored with `status = 'spam'` instead of being dropped, so a real lead can never be
   lost silently; filter them out with `WHERE status = 'new'`.
+- The form and the server share one set of rules (`src/lib/validate.ts`); a rejected field is shown
+  next to that field. Without JavaScript the form is replaced by the phone and WhatsApp links.
+- Unused framework routes (`/_server-islands/*`, `/_image`) answer 404, and only `/api/quote` accepts
+  anything other than GET/HEAD.
+- Free-text fields (name, city, message) are stored as typed: encode them when showing them in HTML,
+  and in spreadsheet exports prefix cells that start with `=`, `+`, `-` or `@`.
 - Forwarding: set a Worker variable or secret `QUOTE_WEBHOOK_URL` (dashboard, or
   `npx wrangler secret put QUOTE_WEBHOOK_URL`) and each stored request is also POSTed there as JSON.
   Until then the confirmation tells visitors that this is a concept site and the request was saved

@@ -3,8 +3,9 @@
  *
  * Protections: same-origin only (dev origins only in `astro dev`), 16 KB body cap
  * counted in bytes while streaming, strict validation, prepared statements, an edge
- * rate limiter (binding QUOTE_LIMITER) plus an atomic D1 limit of 5 requests per
- * visitor per 10 minutes, and a honeypot whose hits are stored as status 'spam'
+ * rate limiter (binding QUOTE_LIMITER) plus one atomic D1 statement enforcing 5
+ * requests per visitor per 10 minutes and 300 per hour overall, and a honeypot whose
+ * hits are stored as status 'spam'
  * (indistinguishable from success to a bot, never silently losing a real lead).
  * If QUOTE_WEBHOOK_URL is set, each stored lead is also forwarded in the background.
  * Responses are generic JSON and never expose internals.
@@ -16,7 +17,9 @@ import { hashClient, parseLead, rateKeyFromIp } from '@/lib/server/lead';
 export const prerender = false;
 
 const MAX_BODY_BYTES = 16_000;
-const RATE_LIMIT = 5;
+const RATE_LIMIT = 5; // per visitor per 10 minutes
+const GLOBAL_HOURLY_LIMIT = 300; // all visitors together, protects the database from floods
+let warnedNoKey = false;
 const SITE_ORIGIN = new URL(import.meta.env.SITE ?? 'https://luxepool.kikkey.com').origin;
 const ALLOWED_ORIGINS = new Set([SITE_ORIGIN, ...(import.meta.env.DEV ? ['http://localhost:4321', 'http://127.0.0.1:4321'] : [])]);
 
@@ -55,7 +58,8 @@ async function readCapped(request: Request): Promise<string> {
   return new TextDecoder().decode(bytes);
 }
 
-export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
+export const POST: APIRoute = async (context) => {
+  const { request, locals } = context;
   try {
     const origin = request.headers.get('origin');
     if (!origin || !ALLOWED_ORIGINS.has(origin)) return json({ ok: false, error: 'forbidden' }, 403);
@@ -84,13 +88,30 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
     const hp = (body as Record<string, unknown>).hp;
     const spam = typeof hp === 'string' && hp.trim() !== '';
 
+    // Cloudflare always sets the client IP; without it there is no fair way to rate-limit.
+    let clientAddress: string | undefined;
+    try {
+      clientAddress = context.clientAddress;
+    } catch {
+      clientAddress = undefined;
+    }
+    if (!clientAddress) return json({ ok: false, error: 'bad_request' }, 400);
+
     // Edge rate limiter (approximate, per location) before touching D1.
-    if (clientAddress && env.QUOTE_LIMITER) {
+    if (env.QUOTE_LIMITER) {
       const { success } = await env.QUOTE_LIMITER.limit({ key: `quote:${rateKeyFromIp(clientAddress)}` });
       if (!success) return json({ ok: false, error: 'rate_limited' }, 429, { 'Retry-After': '60' });
     }
 
-    const ipHash = await hashClient(clientAddress, env.IP_HASH_KEY);
+    if (!env.IP_HASH_KEY && import.meta.env.PROD && !warnedNoKey) {
+      warnedNoKey = true;
+      console.warn('IP_HASH_KEY is not set: ip_hash falls back to a public key. Set it with `wrangler secret put IP_HASH_KEY`.');
+    }
+    // Today's and yesterday's key, so the 10-minute window survives midnight UTC.
+    const [ipHash, ipHashYesterday] = await Promise.all([
+      hashClient(clientAddress, env.IP_HASH_KEY),
+      hashClient(clientAddress, env.IP_HASH_KEY, -1),
+    ]);
     const country = (request as Request & { cf?: { country?: string } }).cf?.country ?? null;
     const userAgent = (request.headers.get('user-agent') ?? '').replace(/[\p{Cc}\p{Cf}]/gu, '').slice(0, 300) || null;
 
@@ -99,10 +120,13 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
       `INSERT INTO leads (name, phone, city, pool_type, pool_type_label, start_window, message,
          design_json, design_summary, example_range, page, ip_hash, country, user_agent, status)
        SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15
-       WHERE ?12 IS NULL OR (
+       WHERE (
          SELECT COUNT(*) FROM leads
-         WHERE ip_hash = ?12 AND created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-10 minutes')
-       ) < ?16`,
+         WHERE ip_hash IN (?12, ?17) AND created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-10 minutes')
+       ) < ?16
+       AND (
+         SELECT COUNT(*) FROM leads WHERE created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 hour')
+       ) < ?18`,
     )
       .bind(
         lead.name,
@@ -121,6 +145,8 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
         userAgent,
         spam ? 'spam' : 'new',
         RATE_LIMIT,
+        ipHashYesterday,
+        GLOBAL_HOURLY_LIMIT,
       )
       .run();
 

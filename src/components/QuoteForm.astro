@@ -70,7 +70,13 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
     </div>
 
     <div class="quote__card" data-reveal>
-      <form class="qf" data-qf novalidate aria-labelledby="quote-title">
+      <noscript>
+        <p class="qf__nojs">
+          כדי לשלוח את הטופס צריך JavaScript. אפשר להתקשר ל-<a href={`tel:${phones.build.tel}`} class="ltr">{phones.build.display}</a>
+          או לכתוב בוואטסאפ ל-<a href={wa} class="ltr">{phones.buildWhatsApp.display}</a>.
+        </p>
+      </noscript>
+      <form class="qf" data-qf method="post" action="/api/quote" novalidate aria-labelledby="quote-title">
         <div class="qf__summary" data-qf-summary hidden>
           <p class="qf__summary-title">יצורף לבקשה</p>
           <p class="qf__summary-text" data-qf-summary-text></p>
@@ -513,6 +519,26 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
     text-align: center;
   }
 
+  .qf[hidden] {
+    display: none;
+  }
+
+  /* Without JavaScript the form can't submit properly: the <noscript> contacts replace it. */
+  :global(html:not(.js)) .qf {
+    display: none;
+  }
+
+  .qf__nojs {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--c-ink);
+  }
+
+  .qf__nojs a {
+    color: var(--c-deep);
+    font-weight: 600;
+  }
+
   .qf-done[hidden] {
     display: none;
   }
@@ -645,6 +671,7 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
 
 <script>
   import { store } from '@/lib/store';
+  import { cleanName, isValidName, normalisePhone } from '@/lib/validate';
   import { designSummary, quoteMessage, waLink } from '@/lib/whatsapp';
   import { examplePrice, formatShekel } from '@/lib/pricing';
   import { poolTypeById, startOptions } from '@/data/site';
@@ -701,8 +728,9 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
   });
 
   // ---------------------------------------------------- validation
-  const digits = (v: string) => v.replace(/\D/g, '');
-  const validPhone = (v: string) => /^(?:972|0)(?:5\d{8}|7\d{8}|[23489]\d{7})$/.test(digits(v));
+  // Same rules as the server (src/lib/validate.ts), so a visitor never meets a hidden rejection.
+  const NAME_ERROR = 'איך לפנות אליכם? כתבו שם (לפחות שתי אותיות).';
+  const PHONE_ERROR = 'בדקו את מספר הטלפון, למשל 050-1234567.';
 
   function setError(name: string, text: string) {
     const input = form.elements.namedItem(name) as HTMLInputElement;
@@ -714,15 +742,15 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
 
   function validate() {
     const fd = new FormData(form);
-    const name = String(fd.get('name') || '').trim();
+    const name = cleanName(fd.get('name'), 80);
     const phone = String(fd.get('phone') || '').trim();
     let ok = true;
-    if (name.length < 2) {
-      setError('name', 'איך לפנות אליכם? כתבו שם.');
+    if (!isValidName(name)) {
+      setError('name', NAME_ERROR);
       ok = false;
     } else setError('name', '');
-    if (!validPhone(phone)) {
-      setError('phone', 'בדקו את מספר הטלפון, למשל 050-1234567.');
+    if (!normalisePhone(phone)) {
+      setError('phone', PHONE_ERROR);
       ok = false;
     } else setError('phone', '');
     return ok;
@@ -735,8 +763,10 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
   );
 
   // ---------------------------------------------------- submit
+  let sending = false;
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (sending) return; // one request at a time: no duplicate leads from double clicks
     status.textContent = '';
     if (!validate()) {
       form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
@@ -765,6 +795,7 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
       submittedAt: new Date().toISOString(),
     };
 
+    sending = true;
     submit.setAttribute('aria-busy', 'true');
     submitLabel.textContent = 'שולחים…';
     try {
@@ -778,6 +809,15 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
         status.textContent = 'קיבלנו כבר כמה בקשות מהמכשיר הזה. נסו שוב בעוד כמה דקות, או כתבו לנו בוואטסאפ.';
         return;
       }
+      if (res.status === 422 && !EXTERNAL) {
+        // The server names the field it rejected; show it next to that field.
+        const answer = (await res.json().catch(() => ({}))) as { field?: string };
+        if (answer.field === 'name' || answer.field === 'phone') {
+          setError(answer.field, answer.field === 'name' ? NAME_ERROR : PHONE_ERROR);
+          form.querySelector<HTMLElement>(`#qf-${answer.field}`)?.focus();
+          return;
+        }
+      }
       if (!res.ok) throw new Error(String(res.status));
       // The site endpoint reports demo=true while leads are only stored (not forwarded).
       const answer = EXTERNAL ? {} : ((await res.json().catch(() => ({}))) as { demo?: boolean });
@@ -785,6 +825,7 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
     } catch {
       status.textContent = 'משהו השתבש בשליחה. נסו שוב, או כתבו לנו בוואטסאפ.';
     } finally {
+      sending = false;
       submit.removeAttribute('aria-busy');
       submitLabel.textContent = 'שלחו בקשה להצעת מחיר';
     }

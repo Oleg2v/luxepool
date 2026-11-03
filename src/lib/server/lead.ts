@@ -11,6 +11,9 @@ import { edges, extras, finishes, poolTypeById, shapes, sizeLimits, startOptions
 import { examplePrice, formatShekel } from '@/lib/pricing';
 import { designSummary } from '@/lib/whatsapp';
 import type { Design } from '@/lib/store';
+import { cleanName, cleanText, isValidName, normalisePhone } from '@/lib/validate';
+
+const text = cleanText;
 
 export interface Lead {
   name: string;
@@ -26,34 +29,7 @@ export interface Lead {
   page: string | null; // path on this site
 }
 
-// Control (Cc), format (Cf: zero-width, bidi overrides/isolates, BOM…) and line/paragraph separators.
-const INVISIBLE = /[\p{Cc}\p{Cf}\u2028\u2029]/gu;
-const INVISIBLE_KEEP_NEWLINES = /[\p{Cf}\u2028\u2029]|(?![\t\n])\p{Cc}/gu;
-
-/** Clean a string field and cap it by code points (never splits a surrogate pair). */
-function text(value: unknown, max: number, multiline = false): string {
-  if (typeof value !== 'string') return '';
-  let s = value.replace(/\r\n?/g, '\n');
-  if (multiline) {
-    s = s.replace(INVISIBLE_KEEP_NEWLINES, '').replace(/[^\S\n]+/g, ' ').replace(/\n{3,}/g, '\n\n');
-  } else {
-    s = s.replace(INVISIBLE, '').replace(/\s+/g, ' ');
-  }
-  return Array.from(s.trim()).slice(0, max).join('').trim();
-}
-
 const orNull = (s: string) => (s ? s : null);
-
-/** Israeli mobile, VoIP (07x) and landline numbers, with 0 or 972 prefix. */
-const PHONE_DIGITS = /^(?:972|0)(?:5\d{8}|7\d{8}|[23489]\d{7})$/;
-
-/** Returns the phone in E.164, or null if it is not a valid Israeli number. */
-export function normalisePhone(raw: string): string | null {
-  if (!/^[\d\s+().\/-]{9,20}$/.test(raw)) return null;
-  const digits = raw.replace(/\D/g, '');
-  if (!PHONE_DIGITS.test(digits)) return null;
-  return `+972${digits.startsWith('972') ? digits.slice(3) : digits.slice(1)}`;
-}
 
 /** Only real numbers or numeric strings (objects with custom valueOf are rejected). */
 function num(v: unknown): number {
@@ -90,7 +66,8 @@ function cleanPage(value: unknown, siteOrigin: string): string | null {
   try {
     const u = new URL(value);
     if (u.origin !== siteOrigin) return null;
-    return Array.from(u.pathname + u.search).slice(0, 300).join('') || '/';
+    // Always a single leading slash: "//evil.example" can never become a protocol-relative link.
+    return Array.from(`/${u.pathname.replace(/^\/+/, '')}${u.search}`).slice(0, 300).join('');
   } catch {
     return null;
   }
@@ -102,9 +79,9 @@ export function parseLead(body: unknown, siteOrigin: string): ParseResult {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return { ok: false, field: 'body' };
   const b = body as Record<string, unknown>;
 
-  const name = text(b.name, 80);
-  if (!/\p{L}.*\p{L}/su.test(name)) return { ok: false, field: 'name' };
-  const phone = normalisePhone(text(b.phone, 32));
+  const name = cleanName(b.name, 80);
+  if (!isValidName(name)) return { ok: false, field: 'name' };
+  const phone = normalisePhone(typeof b.phone === 'string' ? b.phone.slice(0, 40) : '');
   if (!phone) return { ok: false, field: 'phone' };
 
   const type = poolTypeById(typeof b.poolType === 'string' ? b.poolType : null);
@@ -118,7 +95,7 @@ export function parseLead(body: unknown, siteOrigin: string): ParseResult {
     lead: {
       name,
       phone,
-      city: orNull(text(b.city, 60)),
+      city: orNull(cleanName(b.city, 60)),
       poolType: type?.id ?? null,
       poolTypeLabel: type?.short ?? null,
       start,
@@ -150,11 +127,10 @@ export function rateKeyFromIp(ip: string): string {
  * keyed with the IP_HASH_KEY Worker secret, truncated to 128 bits. Without the secret
  * the stored value can't be reversed, and keys can't be linked across days.
  */
-export async function hashClient(ip: string | undefined | null, secret: string | undefined): Promise<string | null> {
-  if (!ip) return null;
+export async function hashClient(ip: string, secret: string | undefined, dayOffset = 0): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey('raw', enc.encode(secret || 'luxepool-local-dev-only'), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const day = new Date().toISOString().slice(0, 10);
+  const day = new Date(Date.now() + dayOffset * 86_400_000).toISOString().slice(0, 10);
   const mac = await crypto.subtle.sign('HMAC', key, enc.encode(`${rateKeyFromIp(ip)}|${day}`));
   return Array.from(new Uint8Array(mac).slice(0, 16), (x) => x.toString(16).padStart(2, '0')).join('');
 }
