@@ -8,14 +8,19 @@
     "dev": "astro dev",
     "build": "astro check && astro build && node scripts/check-budget.mjs",
     "build:fast": "astro build",
-    "preview": "astro preview",
+    "preview": "astro build && wrangler dev",
+    "deploy": "npm run build && node scripts/deploy.mjs",
+    "db:migrate:local": "wrangler d1 migrations apply luxepool-leads --local",
+    "images": "node scripts/build-images.mjs",
+    "og": "node scripts/render-og.mjs",
     "posters": "node scripts/render-posters.mjs",
     "budget": "node scripts/check-budget.mjs"
   },
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22.23.4"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^14.4.4",
     "@fontsource-variable/heebo": "^5.3.0",
     "@fontsource-variable/inter-tight": "^5.3.0",
     "@fontsource/ibm-plex-sans-hebrew": "^5.3.0",
@@ -27,6 +32,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
     "@types/three": "^0.187.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "wrangler": "^4.156.2"
   }
 }

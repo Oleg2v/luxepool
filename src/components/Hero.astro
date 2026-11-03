@@ -5,14 +5,17 @@
  * disturbs. The still poster is a frame of the same shader, so the switch to live water
  * is seamless, and it is the fallback for reduced motion and low-power devices.
  */
-import { Picture } from 'astro:assets';
 import Icon from './Icon.astro';
-import heroPoster from '@/assets/posters/hero-water.jpg';
 import { company } from '@/data/site';
 import { waLink, quoteMessage } from '@/lib/whatsapp';
 import { defaultDesign } from '@/lib/store';
 
 const wa = waLink(quoteMessage({ poolType: null, design: defaultDesign(), designTouched: false }));
+
+// Pre-optimised still of the water shader (scripts/build-images.mjs → public/img).
+const POSTER_WIDTHS = [560, 760, 1000, 1400];
+const posterSet = (ext: 'avif' | 'webp') => POSTER_WIDTHS.map((w) => `/img/hero-water-${w}.${ext} ${w}w`).join(', ');
+const posterSizes = '(min-width: 1024px) 56vw, 100vw';
 ---
 <section class="hero" id="top" aria-labelledby="hero-title">
   <div class="hero__inner container">
@@ -59,20 +62,20 @@ const wa = waLink(quoteMessage({ poolType: null, design: defaultDesign(), design
 
     <div class="hero__pool" data-hero-pool>
       <div class="hero__water" data-hero-host>
-        <Picture
-          src={heroPoster}
-          formats={['avif', 'webp']}
-          widths={[560, 760, 1000, 1400]}
-          quality={58}
-          sizes="(min-width: 1024px) 56vw, 100vw"
-          fallbackFormat="webp"
-          alt=""
-          loading="eager"
-          fetchpriority="high"
-          decoding="async"
-          class="hero__poster"
-          pictureAttributes={{ class: 'hero__poster-pic' }}
-        />
+        <picture class="hero__poster-pic">
+          <source type="image/avif" srcset={posterSet('avif')} sizes={posterSizes} />
+          <source type="image/webp" srcset={posterSet('webp')} sizes={posterSizes} />
+          <img
+            class="hero__poster"
+            src="/img/hero-water-1000.webp"
+            width="1600"
+            height="1600"
+            alt=""
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+          />
+        </picture>
         <div class="hero__ripples" aria-hidden="true"><i></i><i></i><i></i></div>
       </div>
       <button class="hero__pause" type="button" aria-pressed="false" data-hero-pause hidden>

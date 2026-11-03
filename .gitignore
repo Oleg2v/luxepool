@@ -10,3 +10,4 @@ dist/
 .netlify/
 .wrangler/
 lighthouse-*.html
+.dev.vars

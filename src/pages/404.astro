@@ -1,0 +1,79 @@
+---
+/**
+ * 404 — rendered by the Worker for any unknown address (so it returns a real 404
+ * status with the same headers as the rest of the site).
+ */
+import Base from '@/layouts/Base.astro';
+import Icon from '@/components/Icon.astro';
+import { phones } from '@/data/site';
+import { waLink, quoteMessage } from '@/lib/whatsapp';
+import { defaultDesign } from '@/lib/store';
+
+export const prerender = false;
+Astro.response.status = 404;
+
+const wa = waLink(quoteMessage({ poolType: null, design: defaultDesign(), designTouched: false }));
+---
+<Base title="העמוד לא נמצא · לוקספול (קונספט)" description="העמוד שחיפשתם לא נמצא באתר הקונספט של לוקספול." canonical={false}>
+  <header class="nf-top">
+    <div class="container"><a href="/" class="nf-brand ltr">LUXEPOOL</a></div>
+  </header>
+  <main id="main" class="container nf">
+    <p class="nf__code num ltr" aria-hidden="true">404</p>
+    <h1>העמוד לא נמצא</h1>
+    <p class="lead">ייתכן שהקישור השתנה. אפשר לחזור לעמוד הבית, או לכתוב לנו ונחזור אליכם.</p>
+    <div class="nf__actions">
+      <a class="btn btn--primary" href="/">לעמוד הבית</a>
+      <a class="btn btn--ghost" href={wa} target="_blank" rel="noopener">
+        <Icon name="whatsapp" class="wa-glyph" /> וואטסאפ <span class="ltr">{phones.buildWhatsApp.display}</span>
+        <span class="sr-only">(נפתח בחלון חדש)</span>
+      </a>
+    </div>
+  </main>
+  <footer class="container nf-foot">
+    <p lang="en" dir="ltr">Design concept. Not the official Luxepool website.</p>
+  </footer>
+</Base>
+
+<style>
+  .nf-top {
+    padding-block: 22px;
+    border-block-end: 1px solid var(--c-line);
+  }
+  .nf-brand {
+    font: 600 0.9375rem / 1 'Inter Tight', var(--f-ui);
+    letter-spacing: 0.24em;
+    color: var(--c-ink);
+    text-decoration: none;
+  }
+  .nf {
+    display: grid;
+    gap: 18px;
+    align-content: center;
+    min-block-size: 70vh;
+    padding-block: 64px;
+    max-inline-size: 760px;
+  }
+  .nf__code {
+    font: 200 clamp(5rem, 3rem + 10vw, 10rem) / 0.9 'Inter Tight', var(--f-ui);
+    letter-spacing: -0.05em;
+    background: var(--grad-water);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .nf h1 {
+    font-size: var(--t-h2);
+  }
+  .nf__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-block-start: 8px;
+  }
+  .nf-foot {
+    padding-block: 24px 40px;
+    font-size: 0.8125rem;
+    border-block-start: 1px solid var(--c-line);
+  }
+</style>

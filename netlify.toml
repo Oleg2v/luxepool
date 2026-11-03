@@ -1,6 +1,6 @@
 [build]
   command = "npm run build:fast"
-  publish = "dist"
+  publish = "dist/client"
 
 [build.environment]
   NODE_VERSION = "22.23.4"

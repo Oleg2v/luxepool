@@ -2,7 +2,7 @@
 /**
  * 8 · Quote request. Short form, pre-filled from the type selector and the configurator,
  * a big WhatsApp alternative, and clear phone routing (new pool vs. service/equipment).
- * Posts JSON to PUBLIC_QUOTE_WEBHOOK_URL; without it the page runs in demo mode.
+ * Posts JSON to /api/quote (Cloudflare Worker → D1), or to PUBLIC_QUOTE_WEBHOOK_URL if set.
  */
 import Icon from './Icon.astro';
 import { company, phones, poolTypes, startOptions } from '@/data/site';
@@ -148,7 +148,7 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
         <a class="btn btn--ghost" href={wa} data-wa-done target="_blank" rel="noopener">
           <Icon name="whatsapp" class="wa-glyph" /> רוצים להקדים? כתבו לנו בוואטסאפ
         </a>
-        <p class="qf-done__demo" data-qf-demo hidden>מצב הדגמה: הפרטים לא נשלחו לשום מקום. באתר החי הם יגיעו ישר למשרד.</p>
+        <p class="qf-done__demo" data-qf-demo hidden>זהו אתר קונספט: הבקשה נשמרה במערכת ההדגמה ולא הועברה ללוקספול.</p>
         <button type="button" class="qf-done__again" data-qf-again>שליחת בקשה נוספת</button>
       </div>
     </div>
@@ -658,7 +658,10 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
   const status = form.querySelector<HTMLElement>('[data-qf-status]')!;
   const submit = form.querySelector<HTMLButtonElement>('[data-qf-submit]')!;
   const submitLabel = form.querySelector<HTMLElement>('[data-qf-submit-label]')!;
-  const WEBHOOK = (import.meta.env.PUBLIC_QUOTE_WEBHOOK_URL as string | undefined)?.trim() || '';
+  // Default: the site's own endpoint (Cloudflare Worker → D1). PUBLIC_QUOTE_WEBHOOK_URL can
+  // point the form at an external webhook instead (e.g. when hosting the static build elsewhere).
+  const EXTERNAL = (import.meta.env.PUBLIC_QUOTE_WEBHOOK_URL as string | undefined)?.trim() || '';
+  const ENDPOINT = EXTERNAL || '/api/quote';
 
   // ---------------------------------------------------- store ⇄ form
   let autoMsg = '';
@@ -765,18 +768,20 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
     submit.setAttribute('aria-busy', 'true');
     submitLabel.textContent = 'שולחים…';
     try {
-      if (WEBHOOK) {
-        // text/plain keeps this a "simple" CORS request (no preflight); the body is JSON.
-        const res = await fetch(WEBHOOK, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error(String(res.status));
-      } else {
-        await new Promise((r) => setTimeout(r, 650));
+      const res = await fetch(ENDPOINT, {
+        method: 'POST',
+        // External webhooks get text/plain (a "simple" CORS request, no preflight); the body is JSON either way.
+        headers: { 'Content-Type': EXTERNAL ? 'text/plain;charset=UTF-8' : 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.status === 429) {
+        status.textContent = 'קיבלנו כבר כמה בקשות מהמכשיר הזה. נסו שוב בעוד כמה דקות, או כתבו לנו בוואטסאפ.';
+        return;
       }
-      showDone(payload, !WEBHOOK);
+      if (!res.ok) throw new Error(String(res.status));
+      // The site endpoint reports demo=true while leads are only stored (not forwarded).
+      const answer = EXTERNAL ? {} : ((await res.json().catch(() => ({}))) as { demo?: boolean });
+      showDone(payload, !EXTERNAL && answer.demo !== false);
     } catch {
       status.textContent = 'משהו השתבש בשליחה. נסו שוב, או כתבו לנו בוואטסאפ.';
     } finally {

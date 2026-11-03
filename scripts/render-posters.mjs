@@ -9,6 +9,7 @@
  */
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { createRequire } from 'node:module';
@@ -22,10 +23,11 @@ const PORT = 4399;
 const SIZE = 1600;
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.avif': 'image/avif', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml' };
 
-// Minimal static server for dist/ (run `npm run build:fast` first).
+// Minimal static server for the static build (run `npm run build:fast` first).
+const ROOT = existsSync('dist/client') ? 'dist/client' : 'dist';
 const server = createServer(async (req, res) => {
   const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname)).replace(/^([/\\])+/, '');
-  const file = join('dist', path.endsWith('/') || path === '' ? join(path, 'index.html') : path);
+  const file = join(ROOT, path.endsWith('/') || path === '' ? join(path, 'index.html') : path);
   try {
     const body = await readFile(file);
     res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });

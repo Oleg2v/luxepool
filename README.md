@@ -2,12 +2,16 @@
 
 A design concept for **לוקספול שירותי בריכות בע״מ** (Ashdod): one Hebrew-first, RTL home page
 built to turn visitors into serious quote requests. **Design concept, not the official
-Luxepool website** (the page carries `noindex` and says so in the footer).
+Luxepool website** (`noindex` everywhere, and the footer says so).
 
-- **Stack:** Astro 7 static export, TypeScript, vanilla TS islands (no UI framework),
-  three.js for the hero water, the configurator and the build timeline, GSAP + ScrollTrigger,
-  Lenis smooth scroll, Google Fonts self-hosted (IBM Plex Sans Hebrew, Heebo, Inter Tight).
-- **Output:** plain static files in `dist/`, so it deploys to Vercel, Netlify or Cloudflare Pages as is.
+**Live:** https://luxepool.kikkey.com (Cloudflare Workers, account Velikotrav2307).
+
+- **Stack:** Astro 7 + `@astrojs/cloudflare` (every page prerendered, served by Workers static
+  assets), TypeScript, vanilla TS islands, three.js for the hero water, the configurator and the
+  build timeline, GSAP + ScrollTrigger, Lenis, self-hosted Google Fonts (IBM Plex Sans Hebrew,
+  Heebo, Inter Tight).
+- **Server code:** only `POST /api/quote`, which stores quote requests in the D1 database
+  `luxepool-leads`, and the Worker-rendered 404 page.
 
 ## Run locally
 
@@ -17,7 +21,11 @@ Requires Node **22.23.4 or newer** (Astro 7).
 npm install && npm run dev
 ```
 
-Open http://localhost:4321.
+Open http://localhost:4321. To let the form store requests locally, create the local D1 tables once:
+
+```bash
+npm run db:migrate:local
+```
 
 ## Build
 
@@ -25,32 +33,57 @@ Open http://localhost:4321.
 npm run build
 ```
 
-This runs `astro check`, builds to `dist/`, and checks the 3D performance budget (every 3D
-module, three.js included, must stay under 200 KB gzipped). `npm run build:fast` skips the checks.
+Runs `astro check`, builds to `dist/` (`dist/client` = static site, `dist/server` = Worker) and
+checks the 3D performance budget (every 3D module, three.js included, must stay under 200 KB
+gzipped). `npm run build:fast` skips the checks. `npm run preview` serves the build with `wrangler dev`.
 
-## Deploy (static)
+## Deploy (Cloudflare Workers)
 
-| Host | Settings |
-| --- | --- |
-| **Vercel** | Import the repo. `vercel.json` sets the build command (`npm run build:fast`), output `dist`, and `noindex` / cache headers. |
-| **Netlify** | Import the repo. `netlify.toml` sets the build and Node version; `public/_headers` adds `noindex` and caching. |
-| **Cloudflare Pages** | Build command `npm run build:fast`, output directory `dist`, environment variable `NODE_VERSION=22.23.4`. `public/_headers` is picked up automatically. |
-
-Or upload `dist/` to any static host.
-
-## Quote form webhook
-
-Copy `.env.example` to `.env` and set:
-
-```
-PUBLIC_QUOTE_WEBHOOK_URL=https://hook.example.com/...
+```bash
+npm run deploy
 ```
 
-The form POSTs JSON (name, phone, city, pool type, start, message, the configured design,
-its summary and the example range, page URL and timestamp). The request is sent as
-`text/plain` so it is a simple CORS request with no preflight; Make, Zapier, n8n and
-Pipedream all parse the body as JSON. With no URL set the page runs in **demo mode**: the
-form validates, shows the confirmation, and says that nothing was sent.
+Builds, then `scripts/deploy.mjs` refuses to continue unless the generated Worker config targets
+account `be9447…`, worker `luxepool`, exactly one custom domain `luxepool.kikkey.com`, with
+workers.dev and preview URLs off, and a D1 binding; then it runs `wrangler deploy`
+(`WRANGLER_SEND_METRICS=false`). It needs `CLOUDFLARE_API_TOKEN` in the environment (Workers
+Scripts and Routes edit is enough; D1 rights are not needed to deploy).
+
+Configuration lives in `wrangler.jsonc`: custom domain `luxepool.kikkey.com` (Cloudflare creates
+the DNS record and certificate), `workers_dev: false`, `preview_urls: false`, `keep_vars: true`,
+observability on, `nodejs_compat`, D1 binding `DB`. Sessions and the Images binding are disabled
+in `astro.config.mjs` (`session: false`, `imageService: 'passthrough'`), so no KV or Images
+resources are needed; the hero still is pre-optimised in `public/img` (`npm run images`).
+
+### Quote requests (D1)
+
+- Database `luxepool-leads` (region eeur), binding `DB`, table `leads`; schema in
+  `migrations/0001_create_leads.sql`, recorded in `d1_migrations` like wrangler does.
+- New migrations: add `migrations/000N_name.sql` and apply with
+  `npx wrangler d1 migrations apply luxepool-leads --remote` (needs a token with D1 edit).
+- Read requests in the Cloudflare dashboard (D1 → luxepool-leads → Console), e.g.
+  `SELECT created_at, name, phone, city, pool_type_label, design_summary FROM leads ORDER BY id DESC LIMIT 50;`
+- The endpoint accepts same-origin requests only, caps the body at 16 KB, has a honeypot,
+  validates every field against the site's own option lists, uses prepared statements, stores a
+  salted hash of the IP (never the IP), and allows 5 requests per visitor per 10 minutes.
+- Forwarding: set a Worker variable or secret `QUOTE_WEBHOOK_URL` (dashboard, or
+  `npx wrangler secret put QUOTE_WEBHOOK_URL`) and each stored request is also POSTed there as JSON.
+  Until then the confirmation tells visitors that this is a concept site and the request was saved
+  in the demo system, not sent to Luxepool.
+
+### Hidden from search engines
+
+`<meta name="robots" content="noindex, nofollow">` on every page, `robots.txt` with `Disallow: /`,
+and `X-Robots-Tag: noindex, nofollow` on every response (`public/_headers` for static files,
+`src/middleware.ts` for Worker responses), together with `nosniff`, `Referrer-Policy`,
+`Permissions-Policy` and `X-Frame-Options: SAMEORIGIN`. Canonical, hreflang, Open Graph image
+(`public/og.jpg`, `npm run og`) and `sitemap.xml` use https://luxepool.kikkey.com.
+
+### Other static hosts
+
+`dist/client` is a complete static site. `vercel.json` and `netlify.toml` publish it as is.
+Without the Worker there is no `/api/quote`, so set `PUBLIC_QUOTE_WEBHOOK_URL` (see `.env.example`)
+to send the form to an external webhook instead.
 
 ## What is on the page
 
@@ -88,7 +121,8 @@ form validates, shows the confirmation, and says that nothing was sent.
   every crop is computed inside that circle (`src/lib/crop.ts`); the caption panels are never shown.
 - Social links are placeholders: set the real profiles in `src/data/site.ts` (`socials`).
 - The hero still (`src/assets/posters/hero-water.jpg`) is rendered from the real shader:
-  `npm run build:fast && npm run posters` (needs Playwright with Chromium).
+  `npm run build:fast && npm run posters && npm run images` (needs Playwright with Chromium);
+  `npm run images` writes the AVIF/WebP variants the page uses to `public/img`.
 
 ## Performance and accessibility
 
@@ -113,18 +147,25 @@ renders the poster frame.
 
 ```
 .
-├── astro.config.mjs            static export, inlined CSS
+├── astro.config.mjs            Cloudflare adapter, site URL, inlined CSS
+├── wrangler.jsonc              Worker: custom domain, D1 binding, no workers.dev
+├── migrations/                 D1 schema (0001_create_leads.sql)
 ├── package.json
 ├── tsconfig.json
-├── .env.example                PUBLIC_QUOTE_WEBHOOK_URL
-├── vercel.json · netlify.toml  deploy settings
+├── .env.example                optional external webhook for the form
+├── vercel.json · netlify.toml  publish dist/client on other static hosts
 ├── DEMO_FEATURES.md            what the page does for sales (HE / EN)
 ├── public/
-│   ├── _headers                noindex + caching (Netlify, Cloudflare Pages)
+│   ├── _headers                noindex + security headers + caching
+│   ├── img/                    pre-optimised hero still (AVIF/WebP)
+│   ├── og.jpg                  social preview
 │   ├── favicon.svg
 │   └── robots.txt
 ├── scripts/
+│   ├── deploy.mjs              guarded wrangler deploy
 │   ├── check-budget.mjs        3D modules < 200 KB gzip each
+│   ├── build-images.mjs        hero still → public/img
+│   ├── render-og.mjs           public/og.jpg
 │   └── render-posters.mjs      renders the hero still from the shader
 └── src/
     ├── assets/
@@ -153,6 +194,7 @@ renders the poster frame.
     │   ├── pricing.ts          EXAMPLE price model
     │   ├── shapes.ts           pool plan geometry
     │   ├── store.ts            shared visitor choices
+    │   ├── server/lead.ts      server-side validation of quote requests
     │   ├── whatsapp.ts         wa.me links with pre-filled Hebrew messages
     │   └── three/
     │       ├── hero-water.ts       hero renderer (ripple sim, loop, watchdog)
@@ -162,9 +204,14 @@ renders the poster frame.
     │       ├── pool-materials.ts   refractive water, interior, deck
     │       ├── geometry.ts         slabs, walls, perimeter helpers
     │       └── glsl.ts             shared noise / caustics / waves
+    ├── middleware.ts           security + noindex headers on Worker responses
+    ├── cloudflare-env.d.ts     types for the D1 binding
     ├── pages/
     │   ├── index.astro
-    │   └── accessibility.astro
+    │   ├── accessibility.astro
+    │   ├── 404.astro           Worker-rendered 404
+    │   ├── sitemap.xml.ts
+    │   └── api/quote.ts        POST /api/quote → D1
     ├── scripts/
     │   ├── app.ts              WhatsApp links, mobile button, anchors, Lenis + GSAP
     │   ├── scroll-lock.ts

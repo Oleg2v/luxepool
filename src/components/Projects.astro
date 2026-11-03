@@ -6,8 +6,6 @@
  * The Big Brother pool (2023, 2025) is a highlighted case below.
  */
 import Icon from './Icon.astro';
-import heroPoster from '@/assets/posters/hero-water.jpg';
-import { getImage } from 'astro:assets';
 import { company, projects } from '@/data/site';
 import { circleCrop, cropStyle } from '@/lib/crop';
 
@@ -20,7 +18,7 @@ const tick = (i: number, r1: number) => {
 };
 const dialMinor = Array.from({ length: 72 }, (_, i) => (i % 6 ? tick(i, 97.2) : '')).join('');
 const dialMajor = Array.from({ length: 72 }, (_, i) => (i % 6 ? '' : tick(i, 95.5))).join('');
-const texture = await getImage({ src: heroPoster, width: 900, format: 'webp' });
+const texture = { src: '/img/hero-water-1000.webp' };
 const data = projects.map((p) => ({
   city: p.city,
   size: p.size,

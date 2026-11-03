@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Luxepool concept → https://luxepool.kikkey.com (Cloudflare account Velikotrav2307)
+  "name": "luxepool",
+  "account_id": "be9447e281c6e9198712ade2d0241029",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "keep_vars": true,
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "luxepool.kikkey.com", "custom_domain": true }],
+  "observability": { "enabled": true },
+  // Static pages and assets from the Astro build; the Worker only runs for /api/* and 404s.
+  "assets": { "binding": "ASSETS" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "luxepool-leads",
+      "database_id": "5300b933-97f1-42c8-a5a2-09027f23a847",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

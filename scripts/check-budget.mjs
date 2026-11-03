@@ -4,11 +4,13 @@
  * imports, three.js included) must stay under 200 KB gzipped. Also prints the
  * initial JS a visitor downloads before any 3D is requested.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
-const DIR = 'dist/_astro';
+// Cloudflare build: static output lives in dist/client.
+const CLIENT = existsSync('dist/client') ? 'dist/client' : 'dist';
+const DIR = `${CLIENT}/_astro`;
 const LIMIT = 200 * 1024;
 const files = readdirSync(DIR).filter((f) => f.endsWith('.js'));
 const gz = new Map(files.map((f) => [f, gzipSync(readFileSync(join(DIR, f)), { level: 9 }).length]));
@@ -46,7 +48,7 @@ for (const [label, re] of modules) {
 }
 
 // Initial page JS: module scripts referenced from index.html and their static deps.
-const html = readFileSync('dist/index.html', 'utf8');
+const html = readFileSync(`${CLIENT}/index.html`, 'utf8');
 const initial = new Set();
 for (const m of html.matchAll(/src="\/_astro\/([^"]+\.js)"/g)) deps(m[1], initial);
 const initialTotal = [...initial].reduce((s, f) => s + gz.get(f), 0);
