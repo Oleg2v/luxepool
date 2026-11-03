@@ -388,6 +388,28 @@ const posterSizes = '(min-width: 1024px) 56vw, 100vw';
     color: var(--c-body);
   }
 
+  /* ------------------------------------------- phones and tablets: centred */
+  /* The pool is a block of its own here, so it sits centred between the page margins
+     with the coping all round, instead of running off one edge of the screen. */
+  @media (max-width: 1023px) {
+    .hero__pool {
+      margin-inline-end: 0;
+      border: 11px solid var(--c-mist);
+      box-shadow: 0 0 0 1px var(--c-line);
+    }
+    /* soft wall shading on the sides the water image leaves open (left, bottom) */
+    .hero__water::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      box-shadow:
+        inset 14px 0 16px -12px rgb(8 40 84 / 0.4),
+        inset 0 -14px 16px -12px rgb(8 40 84 / 0.4);
+    }
+  }
+
   /* ----------------------------------------------------------- desktop */
   @media (min-width: 1024px) {
     .hero__head {
