@@ -63,21 +63,40 @@ resources are needed; the hero still is pre-optimised in `public/img` (`npm run 
   `npx wrangler d1 migrations apply luxepool-leads --remote` (needs a token with D1 edit).
 - Read requests in the Cloudflare dashboard (D1 → luxepool-leads → Console), e.g.
   `SELECT created_at, name, phone, city, pool_type_label, design_summary FROM leads ORDER BY id DESC LIMIT 50;`
-- The endpoint accepts same-origin requests only, caps the body at 16 KB, has a honeypot,
-  validates every field against the site's own option lists, uses prepared statements, stores a
-  salted hash of the IP (never the IP), and allows 5 requests per visitor per 10 minutes.
+- The endpoint accepts same-origin requests only (dev origins only in `astro dev`), reads at most
+  16 KB (counted in bytes while streaming), validates every field against the site's own option
+  lists, stores the phone in E.164 (`+972…`), recomputes the design summary and the example price on
+  the server, keeps the page only as a same-origin path, and uses prepared statements.
+- Abuse limits: an edge rate limiter (`ratelimits` binding `QUOTE_LIMITER`, 5 per minute per
+  visitor) plus an atomic D1 limit of 5 requests per visitor per 10 minutes (IPv6 is limited per /64).
+  The visitor key stored in `ip_hash` is an HMAC with the Worker secret `IP_HASH_KEY` (set once with
+  `openssl rand -hex 32 | npx wrangler secret put IP_HASH_KEY`), so raw IPs are never stored.
+- Honeypot hits are stored with `status = 'spam'` instead of being dropped, so a real lead can never be
+  lost silently; filter them out with `WHERE status = 'new'`.
 - Forwarding: set a Worker variable or secret `QUOTE_WEBHOOK_URL` (dashboard, or
   `npx wrangler secret put QUOTE_WEBHOOK_URL`) and each stored request is also POSTed there as JSON.
   Until then the confirmation tells visitors that this is a concept site and the request was saved
   in the demo system, not sent to Luxepool.
 
-### Hidden from search engines
+### Hidden from search engines, security headers
 
 `<meta name="robots" content="noindex, nofollow">` on every page, `robots.txt` with `Disallow: /`,
-and `X-Robots-Tag: noindex, nofollow` on every response (`public/_headers` for static files,
-`src/middleware.ts` for Worker responses), together with `nosniff`, `Referrer-Policy`,
-`Permissions-Policy` and `X-Frame-Options: SAMEORIGIN`. Canonical, hreflang, Open Graph image
-(`public/og.jpg`, `npm run og`) and `sitemap.xml` use https://luxepool.kikkey.com.
+and on every response (`public/_headers` for static files, `src/middleware.ts` for Worker responses):
+`X-Robots-Tag: noindex, nofollow`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`,
+`X-Frame-Options: SAMEORIGIN`, `Strict-Transport-Security`, `Cross-Origin-Opener-Policy` and a
+`Content-Security-Policy` (own origin, images from luxepool.co.il, Cloudflare Web Analytics).
+Canonical, hreflang, Open Graph image (`public/og.jpg`, `npm run og`) and `sitemap.xml` use
+https://luxepool.kikkey.com.
+
+Two settings live on the **kikkey.com zone**, not in this repo:
+
+- **Managed robots.txt** (AI Crawl Control): Cloudflare prepends its own block (a list of AI
+  crawlers and `User-agent: * / Allow: /`) to this site's `robots.txt`. Indexing stays blocked by
+  `X-Robots-Tag` and the meta tag; turning the option off makes `robots.txt` exactly the repo's file.
+  It applies to every kikkey.com subdomain.
+- **Always Use HTTPS**: plain `http://` is answered without a server-side redirect. The page bounces
+  to `https://` itself and HSTS keeps returning visitors on HTTPS; the zone option adds a 301 for all
+  subdomains.
 
 ### Other static hosts
 

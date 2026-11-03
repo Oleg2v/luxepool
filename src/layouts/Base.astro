@@ -73,8 +73,14 @@ const fontFaces = [
     <link rel="preload" href={interLatin} as="font" type="font/woff2" crossorigin />
     <style is:inline set:html={fontFaces}></style>
     <script is:inline>
-      // Runs before first paint: enables JS-only styles and motion-only reveals.
+      // Runs before first paint. Plain-http visits go to https (the zone does not redirect),
+      // then JS-only styles and motion-only reveals are enabled.
       (function (d) {
+        var l = location;
+        if (l.protocol === 'http:' && l.hostname !== 'localhost' && l.hostname !== '127.0.0.1') {
+          l.replace('https://' + l.host + l.pathname + l.search + l.hash);
+          return;
+        }
         var c = d.documentElement.classList;
         c.add('js');
         if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) c.add('motion');

@@ -123,8 +123,8 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
         </div>
 
         <div class="qf__hp" aria-hidden="true">
-          <label for="qf-company">חברה</label>
-          <input id="qf-company" name="company" type="text" tabindex="-1" autocomplete="off" />
+          <label for="qf-hp">השאירו שדה זה ריק</label>
+          <input id="qf-hp" name="lp_hp_7f" type="text" tabindex="-1" autocomplete="off" />
         </div>
 
         <p class="qf__status" role="alert" data-qf-status></p>
@@ -743,7 +743,6 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
       return;
     }
     const fd = new FormData(form);
-    if (String(fd.get('company') || '')) return; // honeypot
 
     const s = store.get();
     const type = poolTypeById(String(fd.get('poolType') || ''));
@@ -760,6 +759,7 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
       design: s.designTouched ? s.design : null,
       designSummary: s.designTouched ? designSummary(s.design) : null,
       exampleRange: price ? `${formatShekel(price.low)}–${formatShekel(price.high)} (example only)` : null,
+      hp: String(fd.get('lp_hp_7f') || ''), // honeypot: the server files filled ones as spam
       source: 'luxepool-concept',
       page: location.href,
       submittedAt: new Date().toISOString(),

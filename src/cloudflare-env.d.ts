@@ -19,8 +19,15 @@ declare module 'cloudflare:workers' {
     prepare(query: string): D1PreparedStatement;
     batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]>;
   }
+  interface RateLimit {
+    limit(options: { key: string }): Promise<{ success: boolean }>;
+  }
   export const env: {
     DB: D1Database;
+    /** Edge rate limiter for /api/quote (wrangler.jsonc → ratelimits). */
+    QUOTE_LIMITER?: RateLimit;
+    /** Secret HMAC key for the stored rate-limit hash (set with `wrangler secret put IP_HASH_KEY`). */
+    IP_HASH_KEY?: string;
     /** Optional: forward every stored lead to this URL (Make, Zapier, n8n, CRM…). */
     QUOTE_WEBHOOK_URL?: string;
   };

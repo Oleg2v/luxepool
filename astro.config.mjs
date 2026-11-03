@@ -17,6 +17,9 @@ export default defineConfig({
     imageService: 'passthrough',
   }),
   session: false,
+  // /api/quote enforces the Origin itself (JSON 403 with the security headers);
+  // Astro's generic check would answer cross-site form posts in plain text instead.
+  security: { checkOrigin: false },
   trailingSlash: 'ignore',
   compressHTML: true,
   devToolbar: { enabled: false },
