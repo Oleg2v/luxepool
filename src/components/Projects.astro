@@ -316,6 +316,9 @@ const data = projects.map((p) => ({
       grid-column: 6 / -1;
       grid-row: 1;
     }
+    :global(html:not(.js)) .pj__lens {
+      grid-column: 1 / -1; /* the lens content is centred */
+    }
     .pj__index {
       display: grid;
       gap: 0;

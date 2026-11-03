@@ -68,12 +68,20 @@ if (fab) {
 /* --------------------------------------------- in-page anchors */
 type LenisLike = { scrollTo(t: Element | number, o?: object): void };
 const lenisOf = () => (window as Window & { __lenis?: LenisLike }).__lenis;
-const headerOffset = () => (document.querySelector<HTMLElement>('[data-hdr]')?.offsetHeight ?? 64) + 8;
+/** Where a section should land: html's scroll-padding (header + 8px), the same rule
+ *  native anchor scrolling and Lenis use. */
+const headerOffset = () =>
+  parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) ||
+  (document.querySelector<HTMLElement>('[data-hdr]')?.offsetHeight ?? 64) + 8;
 
 // The anchor scroll in flight, so a layout change while it runs can re-aim it.
 let pending: { target: HTMLElement; land: () => void; until: number } | null = null;
 
-/** Calls `done` once scrolling has stopped (scrollend, or a short quiet period). */
+/**
+ * Calls `done` once scrolling has stopped: on scrollend, or after a quiet period that a
+ * fresh frame confirms (after a long task a timer can fire before the next frame has
+ * moved the page, while a smooth scroll is still running).
+ */
 function afterScroll(done: () => void) {
   let timer = 0;
   let finished = false;
@@ -85,14 +93,18 @@ function afterScroll(done: () => void) {
     window.removeEventListener('scrollend', finish);
     done();
   };
+  const settle = () => {
+    const y = window.scrollY;
+    requestAnimationFrame(() => (window.scrollY === y ? finish() : onScroll()));
+  };
   const onScroll = () => {
     clearTimeout(timer);
-    timer = window.setTimeout(finish, 200);
+    timer = window.setTimeout(settle, 200);
   };
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('scrollend', finish);
-  timer = window.setTimeout(finish, 300); // no scrolling at all: already there
-  setTimeout(finish, 3000);
+  timer = window.setTimeout(settle, 300); // no scrolling at all: already there
+  setTimeout(settle, 3000);
 }
 
 /** If the target did not end up under the header (the layout moved), go there now. */
@@ -103,14 +115,22 @@ function correct(target: HTMLElement) {
   const atEnd = Math.ceil(window.scrollY) >= document.documentElement.scrollHeight - window.innerHeight - 1;
   if (top > want && atEnd) return; // last section: the page cannot scroll any further
   const lenis = lenisOf();
-  if (lenis) lenis.scrollTo(target, { offset: -want, immediate: true, force: true });
+  if (lenis) lenis.scrollTo(window.scrollY + top - want, { immediate: true, force: true });
   else target.scrollIntoView({ block: 'start', behavior: 'instant' as ScrollBehavior });
 }
 
 document.addEventListener('click', (e) => {
+  // New tab / new window / other buttons: leave it to the browser, keep this page still.
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   const a = (e.target as Element).closest<HTMLAnchorElement>('a[href^="#"]');
   if (!a || a.hash.length < 2) return;
-  const target = document.getElementById(decodeURIComponent(a.hash.slice(1)));
+  let id = '';
+  try {
+    id = decodeURIComponent(a.hash.slice(1));
+  } catch {
+    return; // malformed hash: let the browser handle it
+  }
+  const target = document.getElementById(id);
   if (!target) return;
   const toTop = a.hash === '#top';
   // Move focus to the section heading so keyboard and screen-reader users land there too.
@@ -125,7 +145,8 @@ document.addEventListener('click', (e) => {
   const lenis = lenisOf();
   if (lenis) {
     e.preventDefault();
-    lenis.scrollTo(toTop ? 0 : target, { offset: -headerOffset(), duration: 1.3, onComplete: land });
+    // Lenis already keeps element targets below the header (it reads html's scroll-padding).
+    lenis.scrollTo(toTop ? 0 : target, { duration: 1.3, onComplete: land });
     history.pushState(null, '', a.hash);
   } else {
     afterScroll(land); // the browser scrolls natively (smoothly unless reduced motion)
@@ -137,7 +158,7 @@ window.addEventListener('lp:layout', () => {
   if (!pending || performance.now() > pending.until) return;
   const { target, land } = pending;
   const lenis = lenisOf();
-  if (lenis) lenis.scrollTo(target, { offset: -headerOffset(), duration: 0.6, onComplete: land });
+  if (lenis) lenis.scrollTo(target, { duration: 0.6, onComplete: land });
   else target.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
 });
 

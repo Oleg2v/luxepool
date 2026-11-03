@@ -10,7 +10,7 @@ import { edges, extras, finishes, shapes, sizeLimits } from '@/data/site';
 import { defaultDesign } from '@/lib/store';
 import { planSvg } from '@/lib/plan-svg';
 import { examplePrice, formatShekel } from '@/lib/pricing';
-import { waLink, quoteMessage } from '@/lib/whatsapp';
+import { designSummary, waLink, quoteMessage } from '@/lib/whatsapp';
 
 const d = defaultDesign();
 const price = examplePrice(d, null);
@@ -47,6 +47,12 @@ const fmt1 = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
       </div>
 
       <form class="cfg__panel" data-cfg-form aria-labelledby="cfg-title" novalidate>
+        <noscript>
+          <p class="cfg__nojs">
+            התכנון האינטראקטיבי פועל עם JavaScript. מוצגת כאן דוגמה: {designSummary(d)}. את מה שאתם מחפשים
+            אפשר לכתוב בטופס בהמשך העמוד.
+          </p>
+        </noscript>
         <fieldset class="cfg__group">
           <legend><span class="cfg__step num ltr">01</span> צורה</legend>
           <div class="cfg__seg cfg__seg--3">
@@ -166,7 +172,7 @@ const fmt1 = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
             <button type="button" class="btn btn--primary btn--block js-only" data-cfg-send>
               שלחו את התכנון להצעת מחיר
             </button>
-            <a class="btn btn--ghost btn--block" href={wa} data-wa="design" target="_blank" rel="noopener">
+            <a class="btn btn--ghost btn--block js-only" href={wa} data-wa="design" target="_blank" rel="noopener">
               <Icon name="whatsapp" class="wa-glyph" /> שלחו את התכנון בוואטסאפ
               <span class="sr-only">(נפתח בחלון חדש)</span>
             </a>
@@ -199,6 +205,39 @@ const fmt1 = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
     padding-block-end: 8px;
     margin-inline: calc(-1 * var(--margin));
     padding-inline: var(--margin);
+  }
+
+  /* Below 1024px the stuck stage covers the top of the screen: keyboard focus keeps
+     each control below it (stage height + its 8px backing + room for the focus ring). */
+  @media (max-width: 1023px) {
+    .cfg__panel input,
+    .cfg__panel button,
+    .cfg__panel :global(a) {
+      scroll-margin-block-start: calc(clamp(260px, 44svh, 420px) + 24px);
+    }
+  }
+
+  /* Short screens (landscape phones, zoom): the stage scrolls away instead of sticking. */
+  @media (max-width: 1023px) and (max-height: 600px) {
+    .cfg__stage-wrap {
+      position: static;
+    }
+    .cfg__panel input,
+    .cfg__panel button,
+    .cfg__panel :global(a) {
+      scroll-margin-block-start: 16px;
+    }
+  }
+
+  /* Without JavaScript the controls can't update anything: show the example only. */
+  :global(html:not(.js)) .cfg__group {
+    display: none;
+  }
+
+  .cfg__nojs {
+    margin-block-end: 18px;
+    color: var(--c-ink);
+    line-height: 1.7;
   }
 
   .cfg__stage {

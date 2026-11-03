@@ -472,13 +472,18 @@ html:not(.js) .js-only {
   background: var(--c-haze);
 }
 
-.crop > img {
+.crop > img,
+.crop > noscript > img {
   position: absolute;
   max-inline-size: none;
   inline-size: var(--crop-w);
   block-size: auto;
   left: var(--crop-x);
   top: var(--crop-y);
+}
+
+html:not(.js) .crop > img[data-src] {
+  display: none;
 }
 
 /* ------------------------------------------------------------------ toast */

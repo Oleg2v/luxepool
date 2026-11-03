@@ -14,7 +14,7 @@ import { stages } from '@/data/site';
       <p class="eyebrow" data-reveal>איך בונים</p>
       <h2 id="tl-title" data-reveal>מהחפירה ועד השחייה הראשונה</h2>
       <p class="lead" data-reveal style="--reveal-delay:.08s">
-        שבעה שלבים, ובכל אחד מהם עובדים הצוותים של לוקספול עצמם. גללו, והבריכה תיבנה מול העיניים.
+        שבעה שלבים, ובכל אחד מהם עובדים הצוותים של לוקספול עצמם.<span class="tl__live-only"> גללו, והבריכה תיבנה מול העיניים.</span>
       </p>
     </div>
   </div>
@@ -386,6 +386,16 @@ import { stages } from '@/data/site';
     font-size: 1.5rem;
     color: var(--c-ink);
   }
+  /* applied at start-up: no transitions, so the page height is final at once */
+  .tl.is-static .tl__item,
+  .tl.is-static .tl__title,
+  .tl.is-static .tl__text {
+    transition: none;
+  }
+  .tl.is-static .tl__live-only,
+  :global(html:not(.js)) .tl .tl__live-only {
+    display: none;
+  }
 </style>
 
 <script>
@@ -483,14 +493,24 @@ import { stages } from '@/data/site';
       });
       trigger = st;
       onProgress(st.progress);
-      buttons.forEach((b, i) =>
-        b.addEventListener('click', () => {
-          const y = st.start + ((i + 0.55) / N) * (st.end - st.start);
-          const lenis = (window as Window & { __lenis?: { scrollTo(y: number, o?: object): void } }).__lenis;
-          if (lenis) lenis.scrollTo(y, { duration: 1.2 });
-          else window.scrollTo({ top: y, behavior: 'smooth' });
-        }),
-      );
+      const jump = (i: number) => {
+        const y = st.start + ((i + 0.55) / N) * (st.end - st.start);
+        const lenis = (window as Window & { __lenis?: { scrollTo(y: number, o?: object): void } }).__lenis;
+        if (lenis) lenis.scrollTo(y, { duration: 1.2 });
+        else window.scrollTo({ top: y, behavior: 'smooth' });
+      };
+      // Small screens show only the active stage, so keyboard focus on another stage
+      // scrolls to it (it becomes the visible one); larger screens show all stages.
+      const compact = matchMedia('(max-width: 1023px)');
+      buttons.forEach((b, i) => {
+        b.addEventListener('click', () => jump(i));
+        b.addEventListener('focus', () => {
+          if (compact.matches && current !== i && b.matches(':focus-visible')) {
+            setActive(i);
+            jump(i);
+          }
+        });
+      });
     }, '1200px');
   }
 

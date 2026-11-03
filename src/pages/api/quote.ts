@@ -9,8 +9,10 @@
  * (indistinguishable from success to a bot, never silently losing a real lead).
  * If QUOTE_WEBHOOK_URL is set, each stored lead is also forwarded in the background.
  * Responses are generic JSON and never expose internals. A native form post (JavaScript
- * off, or the page script failed to load) goes through the same checks and gets a plain
- * HTML page with the same wording instead, so no request is ever lost to a raw error.
+ * off, or the page script failed to load) goes through the same checks; its errors are
+ * plain HTML pages with the same wording, and a stored request is redirected (303) to
+ * GET /api/quote?sent=1, the confirmation page, so no request is lost to a raw error and
+ * a reload never sends it twice.
  */
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
@@ -24,7 +26,13 @@ const RATE_LIMIT = 5; // per visitor per 10 minutes
 const GLOBAL_HOURLY_LIMIT = 300; // all visitors together, protects the database from floods
 let warnedNoKey = false;
 const SITE_ORIGIN = new URL(import.meta.env.SITE ?? 'https://luxepool.kikkey.com').origin;
-const ALLOWED_ORIGINS = new Set([SITE_ORIGIN, ...(import.meta.env.DEV ? ['http://localhost:4321', 'http://127.0.0.1:4321'] : [])]);
+// The same host over plain http is still this site: a no-JavaScript visitor who opened
+// http:// posts the form with that Origin (the CSP upgrades only the request URL).
+const ALLOWED_ORIGINS = new Set([
+  SITE_ORIGIN,
+  SITE_ORIGIN.replace(/^https:/, 'http:'),
+  ...(import.meta.env.DEV ? ['http://localhost:4321', 'http://127.0.0.1:4321'] : []),
+]);
 
 const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), {
@@ -194,10 +202,18 @@ export const POST: APIRoute = async (context) => {
       );
     }
 
-    return native ? html(formPage('sent', demo), 201) : json({ ok: true, demo }, 201);
+    // Native posts: Post/Redirect/Get, so reloading the confirmation never sends it twice.
+    if (native) return new Response(null, { status: 303, headers: { Location: '/api/quote?sent=1', 'Cache-Control': 'no-store' } });
+    return json({ ok: true, demo }, 201);
   } catch {
     return fail(503, 'unavailable', 'error');
   }
 };
+
+/** The confirmation page a native form post is redirected to; anything else is 405. */
+export const GET: APIRoute = ({ url }) =>
+  url.searchParams.get('sent') === '1'
+    ? html(formPage('sent', !env.QUOTE_WEBHOOK_URL), 200)
+    : json({ ok: false, error: 'method_not_allowed' }, 405, { Allow: 'POST' });
 
 export const ALL: APIRoute = () => json({ ok: false, error: 'method_not_allowed' }, 405, { Allow: 'POST' });

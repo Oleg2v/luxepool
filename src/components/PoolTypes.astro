@@ -428,7 +428,9 @@ import { cropStyle, rectCrop } from '@/lib/crop';
     const c = card.getBoundingClientRect();
     if (c.left >= t.left - 1 && c.right <= t.right + 1) return;
     const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
-    card.scrollIntoView({ inline: 'start', block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
+    // Horizontal only: align the card with the track's start edge (its snap position).
+    const pad = parseFloat(getComputedStyle(track).scrollPaddingInlineStart) || 0;
+    track.scrollBy({ left: rtl ? c.right - (t.right - pad) : c.left - (t.left + pad), behavior: smooth ? 'smooth' : 'auto' });
   });
 
   // ---- mouse drag-to-scroll (touch uses native swipe)

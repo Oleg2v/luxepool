@@ -75,9 +75,12 @@ resources are needed; the hero still is pre-optimised in `public/img` (`npm run 
 - Honeypot hits are stored with `status = 'spam'` instead of being dropped, so a real lead can never be
   lost silently; filter them out with `WHERE status = 'new'`.
 - The form and the server share one set of rules (`src/lib/validate.ts`); a rejected field is shown
-  next to that field. Without JavaScript (or if the page script fails to load) the form posts natively
-  and `/api/quote` answers with a plain HTML page in the same words (`src/lib/server/form-page.ts`);
-  the phone and WhatsApp links are shown next to it.
+  next to that field. Without JavaScript (or if the page script fails to load) the form posts natively:
+  `/api/quote` runs the same checks, answers errors with a plain HTML page in the same words
+  (`src/lib/server/form-page.ts`) and redirects a stored request to `GET /api/quote?sent=1`
+  (Post/Redirect/Get, so a reload never sends it twice); the phone and WhatsApp links are shown next to
+  the form. On a static host with `PUBLIC_QUOTE_WEBHOOK_URL` only the script can post, so there the
+  form is hidden without JavaScript and those links replace it.
 - Unused framework routes (`/_server-islands/*`, `/_image`) answer 404, and only `/api/quote` accepts
   anything other than GET/HEAD.
 - Free-text fields (name, city, message) are stored as typed: encode them when showing them in HTML,

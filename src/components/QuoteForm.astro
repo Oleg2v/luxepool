@@ -12,6 +12,9 @@ import { waLink, quoteMessage, serviceMessage } from '@/lib/whatsapp';
 import { defaultDesign } from '@/lib/store';
 
 const wa = waLink(quoteMessage({ poolType: null, design: defaultDesign(), designTouched: false }));
+// Static hosting with an external webhook: only the script can post there, so without
+// JavaScript the form is hidden and the phone / WhatsApp line replaces it.
+const external = !!(import.meta.env.PUBLIC_QUOTE_WEBHOOK_URL as string | undefined)?.trim();
 const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
 ---
 <section class="section quote" id="contact" aria-labelledby="quote-title">
@@ -74,11 +77,11 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
     <div class="quote__card" data-reveal>
       <noscript>
         <p class="qf__nojs">
-          אפשר גם להתקשר ל-<a href={`tel:${phones.build.tel}`} class="ltr">{phones.build.display}</a>
+          {external ? 'כדי לשלוח את הטופס צריך JavaScript. אפשר להתקשר ל-' : 'אפשר גם להתקשר ל-'}<a href={`tel:${phones.build.tel}`} class="ltr">{phones.build.display}</a>
           או לכתוב בוואטסאפ ל-<a href={wa} class="ltr">{phones.buildWhatsApp.display}</a>.
         </p>
       </noscript>
-      <form class="qf" data-qf method="post" action="/api/quote" aria-labelledby="quote-title">
+      <form class:list={['qf', { 'js-only': external }]} data-qf method="post" action="/api/quote" aria-labelledby="quote-title">
         <div class="qf__summary" data-qf-summary hidden>
           <p class="qf__summary-title">יצורף לבקשה</p>
           <p class="qf__summary-text" data-qf-summary-text></p>
@@ -725,7 +728,7 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
       input.focus({ preventScroll: r.top >= 0 && r.bottom <= window.innerHeight });
     };
     if (lenis) {
-      lenis.scrollTo(target, { offset: -72, duration: 1.4, onComplete: focusName });
+      lenis.scrollTo(target, { duration: 1.4, onComplete: focusName }); // html scroll-padding keeps it below the header
     } else {
       target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
       setTimeout(focusName, 700);
