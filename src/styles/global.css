@@ -197,6 +197,16 @@ button {
 
 /* --------------------------------------------------------------- helpers */
 
+/* The hidden attribute always wins over component display rules. */
+[hidden]:not([hidden='until-found']) {
+  display: none !important;
+}
+
+/* Controls that only work with JavaScript are not shown without it. */
+html:not(.js) .js-only {
+  display: none !important;
+}
+
 .sr-only {
   position: absolute !important;
   inline-size: 1px;

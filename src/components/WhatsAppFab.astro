@@ -31,13 +31,17 @@ const wa = waLink(quoteMessage({ poolType: null, design: defaultDesign(), design
     opacity: 0;
     transform: translateY(16px) scale(0.92);
     pointer-events: none;
-    transition: opacity 0.35s var(--ease-out), transform 0.5s var(--ease-out);
+    /* hidden = out of the tab order too; visibility flips only after the fade-out */
+    visibility: hidden;
+    transition: opacity 0.35s var(--ease-out), transform 0.5s var(--ease-out), visibility 0s linear 0.35s;
   }
 
   .fab.is-on {
     opacity: 1;
     transform: none;
     pointer-events: auto;
+    visibility: visible;
+    transition: opacity 0.35s var(--ease-out), transform 0.5s var(--ease-out), visibility 0s;
   }
 
   .fab:focus-visible {

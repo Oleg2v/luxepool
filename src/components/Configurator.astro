@@ -163,7 +163,7 @@ const fmt1 = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
           </div>
 
           <div class="cfg__actions">
-            <button type="button" class="btn btn--primary btn--block" data-cfg-send>
+            <button type="button" class="btn btn--primary btn--block js-only" data-cfg-send>
               שלחו את התכנון להצעת מחיר
             </button>
             <a class="btn btn--ghost btn--block" href={wa} data-wa="design" target="_blank" rel="noopener">
@@ -344,15 +344,19 @@ const fmt1 = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
     color: var(--c-body);
   }
 
-  /* visually hidden native inputs, focus ring on the visual box */
+  /* Visually hidden native inputs, focus ring on the visual box. Each input covers its
+     whole option, so keyboard focus scrolls the entire option into view; clicks pass
+     through to the label. */
   .cfg__opt input,
   .cfg__swatch input,
   .cfg__chip input {
     position: absolute;
-    opacity: 0;
-    inline-size: 1px;
-    block-size: 1px;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
     margin: 0;
+    opacity: 0;
+    pointer-events: none;
   }
 
   .cfg__seg {

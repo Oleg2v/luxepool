@@ -21,10 +21,10 @@ import { cropStyle, rectCrop } from '@/lib/crop';
     <div class="types__controls" data-reveal>
       <div class="types__progress" aria-hidden="true"><span data-types-progress></span></div>
       <div class="types__arrows">
-        <button type="button" class="types__arrow" data-types-prev aria-label="סוג הקודם" disabled>
+        <button type="button" class="types__arrow js-only" data-types-prev aria-label="סוג הקודם" disabled>
           <Icon name="arrow" size={20} class="types__arrow-prev" />
         </button>
-        <button type="button" class="types__arrow" data-types-next aria-label="סוג הבא">
+        <button type="button" class="types__arrow js-only" data-types-next aria-label="סוג הבא">
           <Icon name="arrow" size={20} />
         </button>
       </div>
@@ -74,7 +74,7 @@ import { cropStyle, rectCrop } from '@/lib/crop';
                 </div>
               </dl>
               <p class="type__best"><span>הכי מתאימה ל</span>{t.bestFor}</p>
-              <button type="button" class="type__pick" aria-pressed="false" data-pick={t.id} aria-describedby={`type-${t.id}`}>
+              <button type="button" class="type__pick js-only" aria-pressed="false" data-pick={t.id} aria-describedby={`type-${t.id}`}>
                 <span class="type__pick-dot" aria-hidden="true"><Icon name="check" size={14} /></span>
                 <span class="type__pick-label" data-pick-label>זו הבריכה שלי</span>
               </button>
@@ -418,6 +418,18 @@ import { cropStyle, rectCrop } from '@/lib/crop';
   track.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
   window.addEventListener('resize', update);
   update();
+
+  // Keyboard focus in a card that is only partly on screen brings the whole card in.
+  track.addEventListener('focusin', (e) => {
+    const el = e.target as HTMLElement;
+    const card = el.closest<HTMLElement>('.type');
+    if (!card || !el.matches(':focus-visible')) return;
+    const t = track.getBoundingClientRect();
+    const c = card.getBoundingClientRect();
+    if (c.left >= t.left - 1 && c.right <= t.right + 1) return;
+    const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    card.scrollIntoView({ inline: 'start', block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
+  });
 
   // ---- mouse drag-to-scroll (touch uses native swipe)
   let dragging = false;

@@ -75,7 +75,9 @@ resources are needed; the hero still is pre-optimised in `public/img` (`npm run 
 - Honeypot hits are stored with `status = 'spam'` instead of being dropped, so a real lead can never be
   lost silently; filter them out with `WHERE status = 'new'`.
 - The form and the server share one set of rules (`src/lib/validate.ts`); a rejected field is shown
-  next to that field. Without JavaScript the form is replaced by the phone and WhatsApp links.
+  next to that field. Without JavaScript (or if the page script fails to load) the form posts natively
+  and `/api/quote` answers with a plain HTML page in the same words (`src/lib/server/form-page.ts`);
+  the phone and WhatsApp links are shown next to it.
 - Unused framework routes (`/_server-islands/*`, `/_image`) answer 404, and only `/api/quote` accepts
   anything other than GET/HEAD.
 - Free-text fields (name, city, message) are stored as typed: encode them when showing them in HTML,
@@ -88,7 +90,8 @@ resources are needed; the hero still is pre-optimised in `public/img` (`npm run 
 ### Hidden from search engines, security headers
 
 `<meta name="robots" content="noindex, nofollow">` on every page, `robots.txt` with `Disallow: /`,
-and on every response (`public/_headers` for static files, `src/middleware.ts` for Worker responses):
+and on every response (`public/_headers` for static files; `src/middleware.ts` and the Worker entry
+`src/worker.ts` for Worker responses, including the few Astro answers before the middleware runs):
 `X-Robots-Tag: noindex, nofollow`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`,
 `X-Frame-Options: SAMEORIGIN`, `Strict-Transport-Security`, `Cross-Origin-Opener-Policy` and a
 `Content-Security-Policy` (own origin, images from luxepool.co.il, Cloudflare Web Analytics).
@@ -220,7 +223,10 @@ renders the poster frame.
     │   ├── pricing.ts          EXAMPLE price model
     │   ├── shapes.ts           pool plan geometry
     │   ├── store.ts            shared visitor choices
+    │   ├── validate.ts         name/phone rules shared by the form and the server
     │   ├── server/lead.ts      server-side validation of quote requests
+    │   ├── server/headers.ts   security + noindex headers (middleware and Worker entry)
+    │   ├── server/form-page.ts HTML answers for native (no-JavaScript) form posts
     │   ├── whatsapp.ts         wa.me links with pre-filled Hebrew messages
     │   └── three/
     │       ├── hero-water.ts       hero renderer (ripple sim, loop, watchdog)
@@ -231,6 +237,7 @@ renders the poster frame.
     │       ├── geometry.ts         slabs, walls, perimeter helpers
     │       └── glsl.ts             shared noise / caustics / waves
     ├── middleware.ts           security + noindex headers on Worker responses
+    ├── worker.ts               Worker entry: Astro handler + headers on every response
     ├── cloudflare-env.d.ts     types for the D1 binding
     ├── pages/
     │   ├── index.astro

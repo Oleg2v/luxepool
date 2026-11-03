@@ -3,7 +3,7 @@
   // Luxepool concept → https://luxepool.kikkey.com (Cloudflare account Velikotrav2307)
   "name": "luxepool",
   "account_id": "be9447e281c6e9198712ade2d0241029",
-  "main": "@astrojs/cloudflare/entrypoints/server",
+  "main": "./src/worker.ts",
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat"],
   "keep_vars": true,

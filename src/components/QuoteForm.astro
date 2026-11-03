@@ -3,6 +3,8 @@
  * 8 · Quote request. Short form, pre-filled from the type selector and the configurator,
  * a big WhatsApp alternative, and clear phone routing (new pool vs. service/equipment).
  * Posts JSON to /api/quote (Cloudflare Worker → D1), or to PUBLIC_QUOTE_WEBHOOK_URL if set.
+ * Without the script (JavaScript off or not loaded) the form still posts natively to
+ * /api/quote, which answers with a plain HTML page.
  */
 import Icon from './Icon.astro';
 import { company, phones, poolTypes, startOptions } from '@/data/site';
@@ -72,11 +74,11 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
     <div class="quote__card" data-reveal>
       <noscript>
         <p class="qf__nojs">
-          כדי לשלוח את הטופס צריך JavaScript. אפשר להתקשר ל-<a href={`tel:${phones.build.tel}`} class="ltr">{phones.build.display}</a>
+          אפשר גם להתקשר ל-<a href={`tel:${phones.build.tel}`} class="ltr">{phones.build.display}</a>
           או לכתוב בוואטסאפ ל-<a href={wa} class="ltr">{phones.buildWhatsApp.display}</a>.
         </p>
       </noscript>
-      <form class="qf" data-qf method="post" action="/api/quote" novalidate aria-labelledby="quote-title">
+      <form class="qf" data-qf method="post" action="/api/quote" aria-labelledby="quote-title">
         <div class="qf__summary" data-qf-summary hidden>
           <p class="qf__summary-title">יצורף לבקשה</p>
           <p class="qf__summary-text" data-qf-summary-text></p>
@@ -523,15 +525,11 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
     display: none;
   }
 
-  /* Without JavaScript the form can't submit properly: the <noscript> contacts replace it. */
-  :global(html:not(.js)) .qf {
-    display: none;
-  }
-
   .qf__nojs {
     font-size: 1rem;
     line-height: 1.7;
     color: var(--c-ink);
+    margin-block-end: 18px;
   }
 
   .qf__nojs a {
@@ -689,6 +687,8 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
   // point the form at an external webhook instead (e.g. when hosting the static build elsewhere).
   const EXTERNAL = (import.meta.env.PUBLIC_QUOTE_WEBHOOK_URL as string | undefined)?.trim() || '';
   const ENDPOINT = EXTERNAL || '/api/quote';
+  // The browser's own validation only applies when this script is not running.
+  form.noValidate = true;
 
   // ---------------------------------------------------- store ⇄ form
   let autoMsg = '';
@@ -718,7 +718,12 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
     sync();
     const target = document.getElementById('contact')!;
     const lenis = (window as Window & { __lenis?: { scrollTo(t: Element, o?: object): void } }).__lenis;
-    const focusName = () => form.querySelector<HTMLInputElement>('#qf-name')!.focus({ preventScroll: true });
+    // If the page moved while scrolling, focusing still brings the field into view.
+    const focusName = () => {
+      const input = form.querySelector<HTMLInputElement>('#qf-name')!;
+      const r = input.getBoundingClientRect();
+      input.focus({ preventScroll: r.top >= 0 && r.bottom <= window.innerHeight });
+    };
     if (lenis) {
       lenis.scrollTo(target, { offset: -72, duration: 1.4, onComplete: focusName });
     } else {
@@ -740,27 +745,41 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
     else input.removeAttribute('aria-invalid');
   }
 
-  function validate() {
-    const fd = new FormData(form);
-    const name = cleanName(fd.get('name'), 80);
-    const phone = String(fd.get('phone') || '').trim();
-    let ok = true;
-    if (!isValidName(name)) {
-      setError('name', NAME_ERROR);
-      ok = false;
-    } else setError('name', '');
-    if (!normalisePhone(phone)) {
-      setError('phone', PHONE_ERROR);
-      ok = false;
-    } else setError('phone', '');
+  const nameInput = form.querySelector<HTMLInputElement>('#qf-name')!;
+  const phoneInput = form.querySelector<HTMLInputElement>('#qf-phone')!;
+
+  function checkName() {
+    const ok = isValidName(cleanName(nameInput.value, 80));
+    setError('name', ok ? '' : NAME_ERROR);
     return ok;
   }
 
-  form.querySelectorAll<HTMLInputElement>('#qf-name, #qf-phone').forEach((el) =>
-    el.addEventListener('blur', () => {
-      if (el.value) validate();
-    }),
-  );
+  function checkPhone() {
+    const ok = !!normalisePhone(phoneInput.value);
+    setError('phone', ok ? '' : PHONE_ERROR);
+    return ok;
+  }
+
+  function validate() {
+    const nameOk = checkName();
+    const phoneOk = checkPhone();
+    return nameOk && phoneOk;
+  }
+
+  // Each field is checked on its own, only after the visitor has typed in it (an empty
+  // field they have not reached yet is never marked), and an error clears as soon as
+  // the value becomes valid.
+  for (const [input, check] of [
+    [nameInput, checkName],
+    [phoneInput, checkPhone],
+  ] as const) {
+    input.addEventListener('blur', () => {
+      if (input.value.trim()) check();
+    });
+    input.addEventListener('input', () => {
+      if (input.getAttribute('aria-invalid') === 'true') check();
+    });
+  }
 
   // ---------------------------------------------------- submit
   let sending = false;
@@ -833,8 +852,17 @@ const waService = waLink(serviceMessage, phones.service.tel.replace('+', ''));
 
   function showDone(p: { name: string; phone: string; poolTypeLabel: string | null; designSummary: string | null; start: string | null }, demo: boolean) {
     const first = p.name.split(/\s+/)[0];
-    done.querySelector('[data-qf-done-title]')!.textContent = `תודה, ${first}. קיבלנו את הבקשה.`;
-    done.querySelector('[data-qf-done-text]')!.textContent = `צוות הבנייה שלנו יחזור אליכם בהקדם, לטלפון ${p.phone}.`;
+    // Name and number are isolated, so a Latin name or "050 123 4567" keeps its order in RTL text.
+    const isolate = (text: string, dir: 'ltr' | 'auto') => {
+      const el = document.createElement('bdi');
+      el.dir = dir;
+      el.textContent = text;
+      return el;
+    };
+    done.querySelector('[data-qf-done-title]')!.replaceChildren('תודה, ', isolate(first, 'auto'), '. קיבלנו את הבקשה.');
+    done
+      .querySelector('[data-qf-done-text]')!
+      .replaceChildren('צוות הבנייה שלנו יחזור אליכם בהקדם, לטלפון ', isolate(p.phone, 'ltr'), '.');
     const list = done.querySelector<HTMLElement>('[data-qf-done-list]')!;
     list.replaceChildren();
     const rows: [string, string | null][] = [

@@ -8,11 +8,14 @@
  * hits are stored as status 'spam'
  * (indistinguishable from success to a bot, never silently losing a real lead).
  * If QUOTE_WEBHOOK_URL is set, each stored lead is also forwarded in the background.
- * Responses are generic JSON and never expose internals.
+ * Responses are generic JSON and never expose internals. A native form post (JavaScript
+ * off, or the page script failed to load) goes through the same checks and gets a plain
+ * HTML page with the same wording instead, so no request is ever lost to a raw error.
  */
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { hashClient, parseLead, rateKeyFromIp } from '@/lib/server/lead';
+import { formPage, type FormOutcome } from '@/lib/server/form-page';
 
 export const prerender = false;
 
@@ -27,6 +30,12 @@ const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =
   new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...extra },
+  });
+
+const html = (body: string, status: number, extra: Record<string, string> = {}) =>
+  new Response(body, {
+    status,
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', ...extra },
   });
 
 class TooLarge extends Error {}
@@ -60,27 +69,49 @@ async function readCapped(request: Request): Promise<string> {
 
 export const POST: APIRoute = async (context) => {
   const { request, locals } = context;
+  const native = (request.headers.get('content-type') ?? '').toLowerCase().startsWith('application/x-www-form-urlencoded');
+  /** The same error as JSON for the page script, or as a page for a native form post. */
+  const fail = (status: number, error: string, outcome: FormOutcome, extra: Record<string, string> = {}, field?: string) =>
+    native ? html(formPage(outcome), status, extra) : json({ ok: false, error, ...(field ? { field } : {}) }, status, extra);
   try {
     const origin = request.headers.get('origin');
-    if (!origin || !ALLOWED_ORIGINS.has(origin)) return json({ ok: false, error: 'forbidden' }, 403);
+    if (!origin || !ALLOWED_ORIGINS.has(origin)) return fail(403, 'forbidden', 'error');
 
     let raw: string;
     try {
       raw = await readCapped(request);
     } catch (e) {
-      if (e instanceof TooLarge) return json({ ok: false, error: 'too_large' }, 413);
-      return json({ ok: false, error: 'bad_request' }, 400);
+      if (e instanceof TooLarge) return fail(413, 'too_large', 'error');
+      return fail(400, 'bad_request', 'error');
     }
 
     let body: unknown;
-    try {
-      body = JSON.parse(raw);
-    } catch {
-      return json({ ok: false, error: 'bad_request' }, 400);
+    if (native) {
+      // Field names as in the form markup; the honeypot input is "lp_hp_7f".
+      const f = new URLSearchParams(raw);
+      body = {
+        name: f.get('name') ?? '',
+        phone: f.get('phone') ?? '',
+        city: f.get('city') ?? '',
+        poolType: f.get('poolType') || null,
+        start: f.get('start') ?? '',
+        message: f.get('message') ?? '',
+        hp: f.get('lp_hp_7f') ?? '',
+        page: request.headers.get('referer') ?? '',
+      };
+    } else {
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        return fail(400, 'bad_request', 'error');
+      }
     }
 
     const parsed = parseLead(body, SITE_ORIGIN);
-    if (!parsed.ok) return json({ ok: false, error: 'invalid', field: parsed.field }, 422);
+    if (!parsed.ok) {
+      const outcome: FormOutcome = parsed.field === 'name' || parsed.field === 'phone' ? parsed.field : 'error';
+      return fail(422, 'invalid', outcome, {}, parsed.field);
+    }
     const lead = parsed.lead;
     const demo = !env.QUOTE_WEBHOOK_URL;
 
@@ -95,12 +126,12 @@ export const POST: APIRoute = async (context) => {
     } catch {
       clientAddress = undefined;
     }
-    if (!clientAddress) return json({ ok: false, error: 'bad_request' }, 400);
+    if (!clientAddress) return fail(400, 'bad_request', 'error');
 
     // Edge rate limiter (approximate, per location) before touching D1.
     if (env.QUOTE_LIMITER) {
       const { success } = await env.QUOTE_LIMITER.limit({ key: `quote:${rateKeyFromIp(clientAddress)}` });
-      if (!success) return json({ ok: false, error: 'rate_limited' }, 429, { 'Retry-After': '60' });
+      if (!success) return fail(429, 'rate_limited', 'limited', { 'Retry-After': '60' });
     }
 
     if (!env.IP_HASH_KEY && import.meta.env.PROD && !warnedNoKey) {
@@ -151,7 +182,7 @@ export const POST: APIRoute = async (context) => {
       .run();
 
     const meta = (result.meta ?? {}) as { changes?: number; last_row_id?: number };
-    if (!meta.changes) return json({ ok: false, error: 'rate_limited' }, 429, { 'Retry-After': '600' });
+    if (!meta.changes) return fail(429, 'rate_limited', 'limited', { 'Retry-After': '600' });
 
     if (!spam && env.QUOTE_WEBHOOK_URL) {
       locals.cfContext.waitUntil(
@@ -163,9 +194,9 @@ export const POST: APIRoute = async (context) => {
       );
     }
 
-    return json({ ok: true, demo }, 201);
+    return native ? html(formPage('sent', demo), 201) : json({ ok: true, demo }, 201);
   } catch {
-    return json({ ok: false, error: 'unavailable' }, 503);
+    return fail(503, 'unavailable', 'error');
   }
 };
 

@@ -63,7 +63,7 @@ const data = projects.map((p) => ({
             <span data-pj-type>{first.type}</span>
           </span>
         </figcaption>
-        <div class="pj__nav">
+        <div class="pj__nav js-only">
           <button type="button" class="pj__arrow" data-pj-prev aria-label="הפרויקט הקודם">
             <Icon name="arrow" size={20} class="pj__arrow-prev" />
           </button>
@@ -73,7 +73,7 @@ const data = projects.map((p) => ({
         </div>
       </figure>
 
-      <div class="pj__index-wrap">
+      <div class="pj__index-wrap js-only">
         <p class="pj__index-label">אינדקס פרויקטים</p>
         <ol class="pj__index" data-pj-list>
           {projects.map((p, i) => (
@@ -257,6 +257,7 @@ const data = projects.map((p) => ({
     padding-inline: var(--margin);
     scrollbar-width: none;
     scroll-snap-type: x proximity;
+    scroll-padding-inline: var(--margin);
   }
 
   .pj__index::-webkit-scrollbar {
@@ -465,6 +466,16 @@ const data = projects.map((p) => ({
   const index = root.querySelector<HTMLElement>('[data-pj-index]')!;
   const list = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-pj-go]'));
   const reduced = reducedMotion();
+
+  // Keyboard focus on an index item that is only partly on screen brings it fully in.
+  root.querySelector<HTMLElement>('[data-pj-list]')?.addEventListener('focusin', (e) => {
+    const b = e.target as HTMLElement;
+    if (!b.matches(':focus-visible')) return;
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const r = b.getBoundingClientRect();
+    if (r.left >= box.left - 1 && r.right <= box.right + 1) return;
+    b.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+  });
 
   let current = 0;
   let busy = false;

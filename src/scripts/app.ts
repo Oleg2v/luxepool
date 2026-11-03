@@ -68,27 +68,77 @@ if (fab) {
 /* --------------------------------------------- in-page anchors */
 type LenisLike = { scrollTo(t: Element | number, o?: object): void };
 const lenisOf = () => (window as Window & { __lenis?: LenisLike }).__lenis;
+const headerOffset = () => (document.querySelector<HTMLElement>('[data-hdr]')?.offsetHeight ?? 64) + 8;
+
+// The anchor scroll in flight, so a layout change while it runs can re-aim it.
+let pending: { target: HTMLElement; land: () => void; until: number } | null = null;
+
+/** Calls `done` once scrolling has stopped (scrollend, or a short quiet period). */
+function afterScroll(done: () => void) {
+  let timer = 0;
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timer);
+    window.removeEventListener('scroll', onScroll);
+    window.removeEventListener('scrollend', finish);
+    done();
+  };
+  const onScroll = () => {
+    clearTimeout(timer);
+    timer = window.setTimeout(finish, 200);
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('scrollend', finish);
+  timer = window.setTimeout(finish, 300); // no scrolling at all: already there
+  setTimeout(finish, 3000);
+}
+
+/** If the target did not end up under the header (the layout moved), go there now. */
+function correct(target: HTMLElement) {
+  const want = headerOffset();
+  const top = target.getBoundingClientRect().top;
+  if (Math.abs(top - want) < 24) return;
+  const atEnd = Math.ceil(window.scrollY) >= document.documentElement.scrollHeight - window.innerHeight - 1;
+  if (top > want && atEnd) return; // last section: the page cannot scroll any further
+  const lenis = lenisOf();
+  if (lenis) lenis.scrollTo(target, { offset: -want, immediate: true, force: true });
+  else target.scrollIntoView({ block: 'start', behavior: 'instant' as ScrollBehavior });
+}
 
 document.addEventListener('click', (e) => {
   const a = (e.target as Element).closest<HTMLAnchorElement>('a[href^="#"]');
   if (!a || a.hash.length < 2) return;
-  const target = document.querySelector<HTMLElement>(a.hash);
+  const target = document.getElementById(decodeURIComponent(a.hash.slice(1)));
   if (!target) return;
-  const lenis = lenisOf();
+  const toTop = a.hash === '#top';
   // Move focus to the section heading so keyboard and screen-reader users land there too.
   const heading = target.querySelector<HTMLElement>('h1, h2') ?? target;
   const land = () => {
+    pending = null;
+    if (!toTop) correct(target);
     if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
     heading.focus({ preventScroll: true });
   };
+  pending = { target, land, until: performance.now() + 4000 };
+  const lenis = lenisOf();
   if (lenis) {
     e.preventDefault();
-    const header = document.querySelector<HTMLElement>('[data-hdr]')?.offsetHeight ?? 64;
-    lenis.scrollTo(a.hash === '#top' ? 0 : target, { offset: -header - 8, duration: 1.3, onComplete: land });
+    lenis.scrollTo(toTop ? 0 : target, { offset: -headerOffset(), duration: 1.3, onComplete: land });
     history.pushState(null, '', a.hash);
   } else {
-    setTimeout(land, reducedMotion() ? 0 : 600);
+    afterScroll(land); // the browser scrolls natively (smoothly unless reduced motion)
   }
+});
+
+// A section changed height while an anchor scroll was running: aim again.
+window.addEventListener('lp:layout', () => {
+  if (!pending || performance.now() > pending.until) return;
+  const { target, land } = pending;
+  const lenis = lenisOf();
+  if (lenis) lenis.scrollTo(target, { offset: -headerOffset(), duration: 0.6, onComplete: land });
+  else target.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
 });
 
 /* --------------------------------------------- Lenis + GSAP (desktop, motion on) */
@@ -112,6 +162,7 @@ async function initSmoothScroll() {
   gsap.ticker.add((time) => lenis.raf(time * 1000));
   gsap.ticker.lagSmoothing(0);
   ScrollTrigger.refresh();
+  window.addEventListener('lp:layout', () => ScrollTrigger.refresh());
 }
 
 if (document.readyState === 'complete') initSmoothScroll();
